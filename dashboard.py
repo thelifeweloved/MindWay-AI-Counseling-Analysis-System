@@ -26,13 +26,14 @@ sessions = sess_res.get("items", [])
 count = sess_res.get("count", 0)
 
 if count == 0:
-    st.warning("세션 데이터가 없습니다.")
+    st.warning("현재 등록된 상담 세션이 없습니다. seed_min.sql 또는 seed.sql을 실행해주세요.")
     st.stop()
 
 df = pd.DataFrame(sessions)
 st.dataframe(df, use_container_width=True)
 
 sess_id = st.selectbox("세션 선택", df["id"].tolist())
+
 
 # -------------------------
 # Dashboard data
@@ -71,8 +72,14 @@ if st.button("전송"):
         "speaker_id": speaker_id,
         "text": text
     }
-    res = requests.post(f"{API}/messages", json=payload).json()
-    st.success(res)
+    resp = requests.post(f"{API}/messages", json=payload)
+
+    if resp.ok:
+        st.success(resp.json())
+        st.rerun()
+    else:
+        st.error(f"API 오류 {resp.status_code}")
+        st.code(resp.text)
 
 st.divider()
 

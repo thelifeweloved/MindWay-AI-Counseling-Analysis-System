@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -45,7 +46,7 @@ def detect_dropout_signal(message: Optional[str]) -> Optional[Dict[str, Any]]:
 
     for kw in NEGATIVE_KEYWORDS:
         if kw in msg:
-            score += 0.3
+            score += 0.5
             rules.append("NEG_KEYWORD")
             break
 
@@ -59,7 +60,7 @@ def detect_dropout_signal(message: Optional[str]) -> Optional[Dict[str, Any]]:
 
     if score >= 0.5:
         return {
-            "type": "DROPOUT_RISK",
+            "type": "RISK_WORD",   # ✅ DB 제약조건에 맞춤
             "status": "OPEN",
             "score": round(min(score, 1.0), 3),
             "rule": "|".join(rules) if rules else "RULE_ENGINE",
@@ -105,28 +106,44 @@ def health_db(db: Session = Depends(get_db)):
     return {"db": "ok", "ping": v}
 
 # =========================================================
-# 4) Sessions
+# 4) Sessions - 대시보드 호환 최적화 버전
 # =========================================================
+
 @app.get("/sessions", response_model=dict)
 def list_sessions(
     limit: int = Query(20, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
-    rows = db.execute(text("""
+    # 명시적으로 컬럼을 지정하여 데이터 누락 방지
+    query = text("""
         SELECT id, uuid, counselor_id, client_id, channel, progress, created_at
         FROM sess
         ORDER BY id DESC
         LIMIT :limit
-    """), {"limit": limit}).mappings().all()
+    """)
+    
+    result = db.execute(query, {"limit": limit}).mappings().all()
+    
+    # 결과를 딕셔너리 리스트로 변환하여 JSON 직렬화 안정성 확보
+    rows = [dict(row) for row in result]
+    
+    # 스트림릿이 기대하는 'items'와 'count' 형식으로 반환
+    return {
+        "items": jsonable_encoder(rows), 
+        "count": len(rows)
+    }
 
-    return {"items": jsonable_encoder(rows), "count": len(rows)}
-
-@app.get("/sessions/{sess_id}", response_model=SessionItem)
+@app.get("/sessions/{sess_id}")
 def get_session(sess_id: int, db: Session = Depends(get_db)):
-    row = db.execute(text("SELECT * FROM sess WHERE id = :sid"), {"sid": sess_id}).mappings().first()
+    # 특정 세션 상세 조회
+    query = text("SELECT * FROM sess WHERE id = :sid")
+    row = db.execute(query, {"sid": sess_id}).mappings().first()
+    
     if not row:
+        # 데이터가 없을 때 404 에러를 반환
         raise HTTPException(status_code=404, detail="Session not found")
-    return row
+        
+    return dict(row)
 
 # =========================================================
 # 5) Messages (List)

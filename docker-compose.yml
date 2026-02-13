@@ -16,4 +16,12 @@ services:
       - --collation-server=utf8mb4_unicode_ci
       - --default-time-zone=+09:00
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      # ⭐⭐⭐⭐⭐ 이 줄이 핵심 (DB 영구 저장)
+      - db_data:/var/lib/mysql
+
+      # 초기 스키마 자동 실행
+      - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql
+
+# ⭐⭐⭐⭐⭐ 볼륨 선언 (없으면 데이터 날아감)
+volumes:
+  db_data:
