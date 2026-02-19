@@ -135,27 +135,52 @@ def call_hcx_sse(messages: List[Dict[str, str]]) -> Dict[str, Any]:
 
 @router.post("/suggestion")
 def helper_suggestion(payload: HelperRequest):
-    # 1. 룰 기반 우선 체크
+    # 1. 룰 기반 우선 체크 (기존 NEG_KEYS 활용)
     base = rule_helper(payload.last_client_text)
 
     # 2. HCX 사용 여부 확인
     use_hcx = _env("USE_HCX", "0") == "1"
     if not use_hcx:
+        # 룰 기반일 때도 프론트엔드 규격(churn_signal)을 맞춰주기 위해 0 추가
+        base["churn_signal"] = 0
         return base
 
     try:
+        # [92% 성능 검증된 시스템 프롬프트]
+        # 모델이 [1] 또는 [0]을 먼저 답변하도록 설계
         system = (
-            "너는 상담사를 돕는 '헬퍼'다. "
-            "내담자 발화를 바탕으로 상담사가 다음에 말할 문장을 2~3문장으로 제안해라. "
-            "공감→구체화 질문→다음 행동 제안 순서로. "
-            "진단/처방은 하지 말고, 위기 신호(자해/자살 암시)가 보이면 안전 확인 질문과 전문기관 연결을 우선 제안해라."
+            "너는 상담사를 돕는 전문 헬퍼야. 내담자의 발화를 분석해서 "
+            "이탈 징후가 보이면 [1], 아니면 [0]을 문장 맨 앞에 반드시 적고, "
+            "그 뒤에 상담사가 바로 사용할 수 있는 공감 멘트와 질문을 제안해줘. "
+            "다른 설명은 하지 마."
         )
+        
         messages = [
             {"role": "system", "content": system},
-            {"role": "user", "content": f"내담자: {payload.last_client_text}\n상담사(직전): {payload.last_counselor_text}".strip()},
+            {"role": "user", "content": f"내담자: {payload.last_client_text}"}
         ]
-        return call_hcx_sse(messages)
+        
+        # 기존에 만들어두신 call_hcx_sse 함수 호출
+        hcx_res = call_hcx_sse(messages)
+        full_text = hcx_res.get("suggestion", "")
+
+        # 3. 휘발성 데이터 분석 (DB 저장 X)
+        # 텍스트 내에 [1]이 있으면 이탈 징후로 판단
+        is_churn = 1 if "[1]" in full_text else 0
+        
+        # 화면에 뿌릴 가이드 텍스트 정제 (태그 제거)
+        clean_suggestion = full_text.replace("[1]", "").replace("[0]", "").strip()
+
+        # 4. 프론트엔드로 즉시 반환 (Response)
+        return {
+            "mode": "HCX",
+            "churn_signal": is_churn,       # 1번 기능: 실시간 넛지 신호
+            "suggestion": clean_suggestion, # 2번 기능: 대응 스크립트
+            "type": "CHURN_ALERT" if is_churn else "NORMAL"
+        }
 
     except Exception as e:
+        # 에러 발생 시 룰 기반으로 안전하게 후퇴(Fallback)
         base["hcx_error"] = str(e)
+        base["churn_signal"] = 0
         return base

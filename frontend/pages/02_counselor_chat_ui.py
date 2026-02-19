@@ -196,11 +196,28 @@ def render_helper_widget(sess_id: int, counselor_id: int, msgs: List[Dict[str, A
             "context": {"mode": mode, "user_request": user_req}
         }
         r = api_post("/helper/suggestion", json=payload)
-        st.session_state[f"helper_result_{si}"] = r.json() if r.ok else {"mode": "RULE", "suggestion": coach_tip(last_client)}
+        # 백엔드의 새로운 규격(churn_signal 포함)을 세션에 저장
+        st.session_state[f"helper_result_{si}"] = r.json() if r.ok else {"mode": "RULE", "suggestion": coach_tip(last_client), "churn_signal": 0}
 
+    # === [여기서부터 시각적 로직 연동] ===
     res = st.session_state[f"helper_result_{si}"]
     if res:
-        st.info(res.get("suggestion", ""))
+        churn_val = res.get("churn_signal", 0)
+        suggestion = res.get("suggestion", "")
+
+        if churn_val == 1:
+            # 1. 넛지 알림: 빨간색 경고창 (st.error)
+            st.error("🚨 **이탈 위험 신호 감지**")
+            # 2. 이탈 방지 전략 출력
+            st.markdown(f"""
+                <div style="padding:15px; border-radius:10px; border:2px solid #ef4444; background:#fef2f2;">
+                    <strong style="color:#b91c1c;">💡 위기 대응 가이드:</strong><br/>
+                    <span style="color:#111827;">{suggestion}</span>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            # 정상 상황일 때
+            st.info(f"💡 **AI 추천 가이드:**\n\n{suggestion}")
 
 # =========================================================
 # 5) Main Layout & Logic
