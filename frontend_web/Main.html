@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindWay - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* (기존 CSS 스타일은 동일하므로 생략하지만, 실제 파일에는 유지되어야 합니다) */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+        body { display: flex; background-color: #f8f9fa; height: 100vh; overflow: hidden; }
+        .sidebar { width: 280px; background-color: #373f50; color: white; display: flex; flex-direction: column; padding: 40px 20px; flex-shrink: 0; }
+        .brand-name { font-size: 2.2rem; font-weight: 700; margin-bottom: 35px; padding-left: 10px; }
+        .user-profile { margin-bottom: 40px; padding-left: 10px; }
+        .user-name { font-size: 1.1rem; font-weight: 500; margin-bottom: 4px; }
+        .user-email { font-size: 0.9rem; opacity: 0.6; }
+        .nav-menu { list-style: none; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; color: rgba(255,255,255,0.7); text-decoration: none; }
+        .nav-item.active { background-color: rgba(255,255,255,0.1); color: white; }
+        .logout-btn { margin-top: auto; color: #ff9a9a; display: flex; align-items: center; padding: 15px; text-decoration: none; font-weight: 500; }
+        .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .kpi-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 30px; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        .kpi-card { border-left: 5px solid #ddd; }
+        .kpi-card.blue { border-left-color: #7389f4; }
+        .kpi-card.red { border-left-color: #e74c3c; }
+        .kpi-card h4 { font-size: 0.9rem; color: #888; margin-bottom: 8px; }
+        .kpi-card .value { font-size: 1.5rem; font-weight: 700; color: #333; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .section-title { font-size: 1.1rem; font-weight: 600; color: #333; margin-bottom: 25px; }
+        .appt-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; table-layout: fixed; }
+        .appt-table th, .appt-table td { text-align: center; padding: 15px 10px; border-bottom: 1px solid #eee; }
+        .status-badge { padding: 6px 16px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+        .status-confirmed { background: #eef2ff; color: #7389f4; }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="brand-name">MindWay</div>
+        <div class="user-profile">
+            <div class="user-name" id="counselorNameDisplay">로드 중...</div>
+            <div class="user-email" id="counselorEmailDisplay">counselor@mindway.com</div>
+        </div>
+        <nav class="nav-menu">
+            <a href="Main.html" class="nav-item active">
+                <span><i class="fa-solid fa-house"></i> Dashboard</span>
+            </a>
+            <a href="Session.html" class="nav-item">
+                <span><i class="fa-regular fa-user"></i> Session Report</span>
+            </a>
+        </nav>
+        <a href="Login.html" class="logout-btn" onclick="localStorage.clear();">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> &nbsp; Logout Account
+        </a>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <h2 id="welcomeHeader" style="font-size: 2rem;">Dashboard</h2>
+        </header>
+
+        <div class="kpi-container">
+            <div class="card kpi-card">
+                <h4>오늘 예약자 수</h4>
+                <div class="value" id="todayApptCount">0명</div>
+            </div>
+            <div class="card kpi-card blue">
+                <h4>평균 상담 만족도 (SAT)</h4>
+                <div class="value" id="avgSatRate">0%</div>
+            </div>
+            <div class="card kpi-card red">
+                <h4>현재 위험 지수 (Risk)</h4>
+                <div class="value" id="currentRiskScore">0.00</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card" style="grid-column: span 2;">
+                <div class="section-title">오늘 예정된 상담예약</div>
+                <table class="appt-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">내담자명</th>
+                            <th style="width: 30%;">예약시간</th>
+                            <th style="width: 25%;">고객등급</th>
+                            <th style="width: 25%;">예약상태</th>
+                        </tr>
+                    </thead>
+                    <tbody id="apptTableBody">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="section-title">세션 만족도 및 위험도 추이</div>
+                <canvas id="qualityChart" height="200"></canvas>
+            </div>
+
+            <div class="card">
+                <div class="section-title">최근 이탈 징후 분석</div>
+                <canvas id="churnChart" height="200"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 1. 초기 설정 및 LocalStorage 연동
+        const counselorId = localStorage.getItem('counselor_id');
+        const counselorName = localStorage.getItem('counselor_name');
+
+        if (!counselorId) {
+            alert("로그인이 필요합니다.");
+            location.href = 'Login.html';
+        }
+
+        // 이름 표시 반영
+        document.getElementById('counselorNameDisplay').innerText = counselorName + " 상담사";
+        document.getElementById('welcomeHeader').innerText = `안녕하세요, ${counselorName} 상담사님`;
+
+        // 2. 차트 객체 전역 선언 (업데이트용)
+        let qualityChart;
+
+        // 3. 실시간 API 데이터 로드
+        async function loadDashboard() {
+            try {
+                // [API 작동 여부 확인 포인트]
+                const response = await fetch(`http://127.0.0.1:8000/stats/quality-trend?counselor_id=${counselorId}`);
+                const result = await response.json();
+                const data = result.items;
+
+                if (data && data.length > 0) {
+                    const labels = data.map(item => item.date);
+                    const satScores = data.map(item => item.avg_sat_rate);
+                    const riskScores = data.map(item => item.avg_risk_score * 100);
+
+                    // 상단 KPI 업데이트
+                    const latest = data[data.length - 1];
+                    document.getElementById('avgSatRate').innerText = latest.avg_sat_rate.toFixed(1) + "%";
+                    document.getElementById('currentRiskScore').innerText = latest.avg_risk_score.toFixed(2);
+
+                    renderQualityChart(labels, satScores, riskScores);
+                }
+
+                // 예약 목록 로드
+                loadAppointments();
+            } catch (error) {
+                console.error("대시보드 로드 실패:", error);
+            }
+        }
+
+        async function loadAppointments() {
+            const response = await fetch(`http://127.0.0.1:8000/appointments?counselor_id=${counselorId}`);
+            const result = await response.json();
+            const appts = result.items;
+
+            document.getElementById('todayApptCount').innerText = appts.length + "명";
+            
+            const tbody = document.getElementById('apptTableBody');
+            tbody.innerHTML = appts.map(a => `
+                <tr>
+                    <td><strong>${a.client_name}</strong></td>
+                    <td>${a.at.replace('T', ' ')}</td>
+                    <td>${a.client_grade}</td>
+                    <td><span class="status-badge status-confirmed">${a.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderQualityChart(labels, satData, riskData) {
+            const ctx = document.getElementById('qualityChart').getContext('2d');
+            if(qualityChart) qualityChart.destroy();
+            
+            qualityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '만족도(%)', data: satData, borderColor: '#7389f4', tension: 0.3, fill: false },
+                        { label: '위험도(x100)', data: riskData, borderColor: '#e74c3c', tension: 0.3, fill: false }
+                    ]
+                },
+                options: { scales: { y: { beginAtZero: true, max: 100 } } }
+            });
+        }
+
+        window.onload = loadDashboard;
+    </script>
+</body>
+</html>

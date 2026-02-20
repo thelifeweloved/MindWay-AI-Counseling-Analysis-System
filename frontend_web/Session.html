@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindWay - Session Report</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* [디자인 보존] 이안 팀장님의 기존 CSS 가이드 100% 유지 */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+        body { display: flex; background-color: #f8f9fa; height: 100vh; overflow: hidden; }
+        .sidebar { width: 280px; background-color: #373f50; color: white; display: flex; flex-direction: column; padding: 40px 20px; flex-shrink: 0; }
+        .brand-name { font-size: 2.2rem; font-weight: 700; margin-bottom: 35px; padding-left: 10px; }
+        .user-profile { margin-bottom: 40px; padding-left: 10px; }
+        .user-name { font-size: 1.1rem; font-weight: 500; margin-bottom: 4px; }
+        .nav-menu { list-style: none; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; color: rgba(255,255,255,0.7); text-decoration: none; }
+        .nav-item.active { background-color: rgba(255, 255, 255, 0.1); color: white; }
+        .logout-btn { margin-top: auto; color: #ff9a9a; display: flex; align-items: center; padding: 15px; text-decoration: none; font-weight: 500; }
+        .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; }
+        .risk-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #ddd; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .stat-card.risk { border-left-color: #e74c3c; }
+        .report-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .report-table th, .report-table td { text-align: center; padding: 12px; border-bottom: 1px solid #eee; }
+        .risk-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+        .high-risk { background: #fff5f5; color: #e74c3c; }
+        .summary-box { background: #f9faff; padding: 15px; border-radius: 8px; line-height: 1.6; color: #444; }
+        .chat-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .chat-table th { background-color: #fcfcfc; padding: 12px; border-bottom: 2px solid #eee; text-align: left; }
+        .chat-table td { padding: 14px 12px; border-bottom: 1px solid #f1f1f1; vertical-align: top; }
+        .speaker-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .speaker-client { background: #e3f2fd; color: #1976d2; }
+        .speaker-counselor { background: #f3e5f5; color: #7b1fa2; }
+        .risk-score-val { font-weight: 700; }
+        .score-high { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand-name">MindWay</div>
+        <div class="user-profile">
+            <div class="user-name" id="profileName">로드 중...</div>
+            <div class="user-email">counselor@mindway.com</div>
+        </div>
+        <nav class="nav-menu">
+            <a href="Main.html" class="nav-item"><span><i class="fa-solid fa-house"></i> Dashboard</span></a>
+            <a href="Session.html" class="nav-item active"><span><i class="fa-regular fa-user"></i> Session Report</span></a>
+        </nav>
+        <a href="Login.html" class="logout-btn" onclick="localStorage.clear();">Logout</a>
+    </aside>
+
+    <main class="main-content">
+        <header class="header"><h2>Session Analysis Report</h2></header>
+        <div class="risk-summary-grid">
+            <div class="stat-card risk"><h5>이탈 위험 세션</h5><div class="val" id="riskCount">0건</div></div>
+            <div class="stat-card"><h5>평균 만족도</h5><div class="val" id="avgSat">0%</div></div>
+            <div class="stat-card"><h5>분석 세션 수</h5><div class="val" id="totalSess">0건</div></div>
+        </div>
+
+        <div class="report-grid">
+            <div class="card">
+                <div class="section-title">최근 세션 목록</div>
+                <table class="report-table">
+                    <thead><tr><th>ID</th><th>날짜</th><th>위험도</th><th>사유</th><th>상세</th></tr></thead>
+                    <tbody id="sessionListBody"></tbody>
+                </table>
+            </div>
+            <div class="card">
+                <div class="section-title">AI 분석 리포트 <span id="target-id" style="color:#aaa; font-size:0.8rem;"></span></div>
+                <div class="report-header"><p><strong>내담자:</strong> <span id="report-client">선택 안 함</span></p></div>
+                <div class="summary-box" id="report-summary">세션을 선택하면 분석 결과가 나타납니다.</div>
+            </div>
+        </div>
+
+        <div class="card chat-history-card">
+            <div class="section-title">대화 상세 내역</div>
+            <table class="chat-table">
+                <thead><tr><th>시간</th><th>발화자</th><th>내용</th><th>Risk</th></tr></thead>
+                <tbody id="chatContentBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // [안전 장치] 모든 DOM 로드 후 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            const counselorId = localStorage.getItem('counselor_id') || 1;
+            const counselorName = localStorage.getItem('counselor_name') || "상담사";
+            document.getElementById('profileName').innerText = counselorName + " 상담사";
+
+            loadSessionList();
+        });
+
+        async function loadSessionList() {
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/sessions?limit=20`);
+                const data = await res.json();
+                const items = data.items || [];
+                
+                document.getElementById('totalSess').innerText = items.length + "건";
+                document.getElementById('riskCount').innerText = items.filter(s => s.end_reason === 'DROPOUT').length + "건";
+
+                const tbody = document.getElementById('sessionListBody');
+                tbody.innerHTML = items.map(s => `
+                    <tr onclick="loadReport(${s.id})" style="cursor:pointer;">
+                        <td>S-${s.id}</td>
+                        <td>${s.start_at.substring(5, 16).replace('T', ' ')}</td>
+                        <td><span class="risk-badge ${s.end_reason === 'DROPOUT' ? 'high-risk' : ''}">${s.end_reason === 'DROPOUT' ? 'HIGH' : 'LOW'}</span></td>
+                        <td>${s.end_reason}</td>
+                        <td><button class="btn-view">보기</button></td>
+                    </tr>
+                `).join('');
+
+                if (items.length > 0) loadReport(items[0].id);
+            } catch (e) { console.error("목록 로드 실패", e); }
+        }
+
+        async function loadReport(sid) {
+            try {
+                const [dashRes, msgRes] = await Promise.all([
+                    fetch(`http://127.0.0.1:8000/sessions/${sid}/dashboard`),
+                    fetch(`http://127.0.0.1:8000/sessions/${sid}/messages`)
+                ]);
+                const dash = await dashRes.json();
+                const msgs = await msgRes.json();
+
+                document.getElementById('target-id').innerText = "S-" + sid;
+                document.getElementById('report-client').innerText = "C-" + dash.session.client_id;
+                document.getElementById('report-summary').innerHTML = `평균 위험도 <strong>${(dash.risk_score * 100).toFixed(1)}%</strong>의 세션입니다.`;
+
+                const chatBody = document.getElementById('chatContentBody');
+                chatBody.innerHTML = (msgs.items || []).map(m => `
+                    <tr>
+                        <td>${m.at.substring(11, 19)}</td>
+                        <td><span class="speaker-badge speaker-${m.speaker.toLowerCase()}">${m.speaker}</span></td>
+                        <td>${m.text || '-'}</td>
+                        <td><span class="risk-score-val ${m.stt_conf < 0.5 ? 'score-high' : ''}">${m.stt_conf.toFixed(2)}</span></td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error("리포트 로드 실패", e); }
+        }
+    </script>
+</body>
+</html>

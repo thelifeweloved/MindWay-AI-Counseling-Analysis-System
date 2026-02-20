@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindWay Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        body,
+        html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 왼쪽 섹션: 브랜드 영역 - 배경색 수정됨 */
+        .brand-section {
+            flex: 1;
+            background-color: #373f50;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .brand-section h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1px;
+        }
+
+        .brand-section p {
+            font-size: 1.4rem;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        /* 오른쪽 섹션: 로그인 폼 영역 */
+        .login-section {
+            flex: 1;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .login-box h2 {
+            font-size: 2.8rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            font-weight: 700;
+        }
+
+        .welcome-msg {
+            color: #999;
+            margin-bottom: 3.5rem;
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.2rem;
+        }
+
+        .input-group i:not(.eye-icon) {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+            font-size: 1.2rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 18px 50px 18px 55px;
+            background-color: #f5f7fb;
+            border: 1px solid #e1e5ee;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            outline: none;
+            transition: all 0.2s ease;
+            color: #333;
+        }
+
+        .input-group input::placeholder {
+            color: #aaa;
+        }
+
+        .input-group input:focus {
+            border-color: #7389f4;
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(115, 137, 244, 0.1);
+        }
+
+        .eye-icon {
+            position: absolute;
+            right: 20px;
+            left: auto;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #aaa;
+            font-size: 1.25rem;
+            z-index: 10;
+            transition: color 0.2s;
+        }
+
+        .eye-icon:hover {
+            color: #6d83f2;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 18px;
+            background-color: #7389f4;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 2rem;
+            transition: background-color 0.2s;
+            box-shadow: 0 4px 12px rgba(115, 137, 244, 0.2);
+        }
+
+        .login-btn:hover {
+            background-color: #5d74e3;
+        }
+
+        .forgot-password {
+            margin-top: 2.5rem;
+            display: inline-block;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+
+        .forgot-password:hover {
+            color: #7389f4;
+            text-decoration: underline;
+        }
+
+        /* 반응형 모바일 처리 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .brand-section {
+                padding: 60px 20px;
+                flex: none;
+                height: 40vh;
+            }
+
+            .brand-section h1 {
+                font-size: 3rem;
+            }
+
+            .login-section {
+                padding: 40px 20px;
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="brand-section">
+            <h1>MindWay</h1>
+            <p>더 나은 상담을 위한 여정의 시작.</p>
+        </div>
+
+        <div class="login-section">
+            <div class="login-box">
+                <h2>Welcome</h2>
+                <p class="welcome-msg">상담사님, 환영합니다</p>
+
+                <form id="loginForm">
+                    <div class="input-group">
+                        <i class="fa-regular fa-user"></i>
+                        <input type="text" placeholder="아이디를 입력하세요" required>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="passwordInput" placeholder="비밀번호를 입력하세요" required>
+                        <i class="fa-regular fa-eye-slash eye-icon" id="togglePassword"></i>
+                    </div>
+
+                    <button type="submit" class="login-btn">Login</button>
+                </form>
+
+                <a href="#" class="forgot-password">Forgot Password</a>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // 비밀번호 보이기/숨기기 기능 (기존 유지)
+    const togglePassword = document.querySelector('#togglePassword');
+    const passwordInput = document.querySelector('#passwordInput');
+
+    togglePassword.addEventListener('click', function () {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        this.classList.toggle('fa-eye');
+        this.classList.toggle('fa-eye-slash');
+    });
+
+    // [중요] 실제 SMHRD DB 연동 로그인 로직
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        
+        // 입력값 가져오기 (input 태그에 id를 부여하지 않았으므로 selector로 선택)
+        const email = document.querySelector('input[type="text"]').value;
+        const pwd = passwordInput.value;
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/login', { // 로컬 백엔드 주소
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, pwd })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                // 로그인 성공 시 세션 정보 저장 후 이동
+                localStorage.setItem('counselor_name', result.counselor_name);
+                localStorage.setItem('counselor_id', result.counselor_id);
+                
+                alert(`${result.counselor_name} 상담사님, 환영합니다!`);
+                location.href = 'Main.html'; // 대시보드로 이동
+            } else {
+                // 실패 시 에러 메시지
+                alert(result.detail || '로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요.');
+            }
+        } catch (error) {
+            console.error('연결 에러:', error);
+            alert('서버와 연결할 수 없습니다. FastAPI가 켜져 있는지 확인하세요!');
+        }
+    });
+</script>
+</body>
+
+</html>
