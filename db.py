@@ -4,7 +4,10 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import QueuePool
 from dotenv import load_dotenv
 
-load_dotenv()
+# 수정 — 이 파일 기준으로 상위 폴더까지 올라가며 .env 탐색
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
+
 
 # 환경 변수 로드
 DB_HOST = os.getenv("DB_HOST")

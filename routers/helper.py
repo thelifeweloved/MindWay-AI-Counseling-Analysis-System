@@ -1,5 +1,7 @@
 import os
 import json
+import re
+import time
 import requests
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -8,179 +10,257 @@ from typing import Optional, Dict, Any, List
 router = APIRouter(prefix="/helper", tags=["helper"])
 
 # =========================================================
-# Request (명세서 규격과 기존 연동의 정합성 확보)
+# 시스템 프롬프트 (v2 - 개입 전략 방향 버전)
+# =========================================================
+SYSTEM_PROMPT = (
+    "너는 심리상담사의 의사결정을 실시간으로 보조하는 AI 헬퍼다."
+    " 너는 상담사 대신 말하거나 내담자에게 직접 답하지 않는다."
+    " 너는 상담사가 다음 개입을 결정할 수 있도록 분석 정보를 제공한다."
+    " [절대 규칙]"
+    " 출력은 반드시 JSON 한 줄만. 설명/문장/마크다운/코드블록 금지."
+    " JSON은 반드시 파싱 가능해야 한다."
+    " 필수 키: insight, emotions, intent, risk, suggestions"
+    " emotions는 문자열 리스트 3개 이상."
+    " risk.level은 Normal 또는 Caution 또는 High 중 하나."
+    " suggestions는 길이 3의 리스트,"
+    " 각 원소는 {type, rationale, direction} 형태."
+    " 진단/처방/의학적 단정 금지."
+    " [안전 규칙]"
+    " 자해/자살/타해/학대/응급 징후가 있으면 risk.level=High."
+    " High일 때는 안전 확인 개입이 필요함을 risk.message에 안내."
+    " [suggestions 규칙]"
+    " type: 개입 유형(공감 심화/회피 탐색/목표 재확인/위험 모니터링 등)."
+    " rationale: 이 개입이 필요한 근거."
+    " direction: 상담사가 취할 구체적 전략 방향 1~2문장."
+    " [스키마]"
+    " {insight: 한문장요약, emotions: [감정1,감정2,감정3],"
+    " intent: 욕구추정, risk: {level: Normal|Caution|High,"
+    " signals: [근거1], message: 상담사안내},"
+    " suggestions: [{type,rationale,direction}x3]}"
+    " 확신 없으면 risk.level=Caution으로 하고 나머지는 최대한 채워라."
+)
+
+# 룰 기반 키워드
+NEG_KEYS = ["그만", "포기", "싫어", "힘들", "못하겠", "안 할래", "의미없", "죽고싶"]
+HIGH_RISK_KEYS = ["죽고싶", "자해", "사라지고싶", "없어지고싶", "끝내고싶"]
+
+JSON_RE = re.compile(r"{.*}", re.DOTALL)
+
+# =========================================================
+# Request / Response 스키마
 # =========================================================
 class HelperRequest(BaseModel):
-    # 명세서 ID인 session_id를 기본으로 하되, 
-    # 기존 코드와의 호환성을 위해 sess_id라는 별칭(Alias)을 허용합니다.
     session_id: int = Field(..., alias="sess_id", ge=1)
     counselor_id: int = Field(..., ge=1)
     last_client_text: str = ""
     last_counselor_text: str = ""
+    history: Optional[List[Dict[str, str]]] = None
     context: Optional[Dict[str, Any]] = None
 
-    # Pydantic v2에서 별칭 사용 시 필수 설정
     model_config = {"populate_by_name": True}
 
-# 명세서의 부정 발화 분석 목적을 반영한 키워드 확장
-NEG_KEYS = ["그만", "포기", "싫어", "힘들", "못하겠", "안 할래", "의미없", "죽고싶"]
-
-def rule_helper(text: str) -> Dict[str, Any]:
-    t = (text or "").strip()
-
-    if not t:
-        return {"mode": "RULE", "suggestion": "내담자 발화가 없습니다. 라포 형성부터 시작하세요."}
-
-    if any(k in t for k in NEG_KEYS):
-        return {
-            "mode": "RULE",
-            "type": "RISK_WORD", # 명세서 alert.type 규격 일치
-            "suggestion": (
-                "① 공감: 정말 힘드셨겠어요.\n"
-                "② 구체화: 가장 힘든 부분을 한 가지만 말해주실래요?\n"
-                "③ 안정화: 잠깐 호흡을 같이 맞춰볼까요?"
-            ),
-            "risk_hint": "이탈 위험 신호 가능", # alert 테이블 연동 포인트
-            "action": "부정적 발화 감지: 공감 및 안전 확인 질문 제안" # 명세서 alert.action 규격
-        }
-
-    if any(k in t for k in ["불안", "걱정"]):
-        return {
-            "mode": "RULE",
-            "suggestion": (
-                "① 공감: 불안이 느껴지시는군요.\n"
-                "② 수치화: 0~10 중 몇 정도인가요?"
-            ),
-        }
-
-    return {"mode": "RULE", "suggestion": "공감 → 구체화 질문 → 다음 행동 제안 순서 권장"}
-
 # =========================================================
-# HyperCLOVA X (SSE 파싱 로직 및 환경변수 로드 유지)
+# 유틸
 # =========================================================
 def _env(name: str, default: str = "") -> str:
-    # SMHRD 서버의 .env 환경변수를 안전하게 로드합니다.
     return os.getenv(name, default).strip()
 
-def call_hcx_sse(messages: List[Dict[str, str]]) -> Dict[str, Any]:
-    host = _env("HCX_HOST")
-    model = _env("HCX_MODEL", "HCX-DASH-002")
-    api_key = _env("HCX_API_KEY")
-    request_id = _env("HCX_REQUEST_ID", "mindway-helper")
-    timeout = int(_env("HCX_TIMEOUT", "20"))
+def _fallback_result(reason: str = "") -> Dict[str, Any]:
+    return {
+        "mode": "FALLBACK",
+        "churn_signal": 0,
+        "insight": "분석 실패: " + reason,
+        "emotions": ["불명확", "파악불가", "분석필요"],
+        "intent": "추정 불가",
+        "risk": {
+            "level": "Caution",
+            "signals": [],
+            "message": "응답 오류. 상담사가 직접 판단 필요"
+        },
+        "suggestions": [
+            {"type": "공감 심화",    "rationale": "분석 실패", "direction": "내담자 감정 반영 탐색 필요"},
+            {"type": "탐색",         "rationale": "분석 실패", "direction": "핵심 주제 재확인 질문 고려"},
+            {"type": "목표/다음단계","rationale": "분석 실패", "direction": "상담 속도 조율 및 안전 확인"}
+        ],
+        "type": "NORMAL"
+    }
 
-    if not host or not api_key:
-        raise RuntimeError("HCX_HOST / HCX_API_KEY 가 비어있습니다. SMHRD 서버의 .env를 확인하세요.")
+def safe_json_extract(text):
+    if text is None:
+        return None
+    m = JSON_RE.search(str(text).strip())
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(0))
+    except Exception:
+        return None
+
+def check_completeness(obj) -> bool:
+    if not isinstance(obj, dict):
+        return False
+    for k in ["insight", "emotions", "intent", "risk", "suggestions"]:
+        if k not in obj:
+            return False
+    if not isinstance(obj.get("emotions"), list) or len(obj["emotions"]) < 2:
+        return False
+    risk = obj.get("risk", {})
+    if not isinstance(risk, dict):
+        return False
+    if risk.get("level") not in ["Normal", "Caution", "High"]:
+        return False
+    sugg = obj.get("suggestions")
+    if not isinstance(sugg, list) or len(sugg) < 3:
+        return False
+    for s in sugg[:3]:
+        if not isinstance(s, dict) or "type" not in s:
+            return False
+    return True
+
+# =========================================================
+# 룰 기반 1차 필터
+# =========================================================
+def rule_check(text: str) -> Dict[str, Any]:
+    t = (text or "").strip()
+    if not t:
+        return {"skip_hcx": True, "churn_signal": 0,
+                "type": "NORMAL", "mode": "RULE",
+                "insight": "발화 없음",
+                "risk_level": "Normal",
+                "suggestion": "내담자 발화가 없습니다. 라포 형성부터 시작하세요."}
+    if any(k in t for k in HIGH_RISK_KEYS):
+        return {"skip_hcx": False, "churn_signal": 1,
+                "type": "HIGH_RISK", "mode": "RULE",
+                "risk_level": "High"}
+    if any(k in t for k in NEG_KEYS):
+        return {"skip_hcx": False, "churn_signal": 1,
+                "type": "CHURN_ALERT", "mode": "RULE",
+                "risk_level": "Caution"}
+    return {"skip_hcx": False, "churn_signal": 0,
+            "type": "NORMAL", "mode": "RULE",
+            "risk_level": "Normal"}
+
+# =========================================================
+# HCX 호출 (비스트리밍 JSON 응답)
+# =========================================================
+def call_hcx(messages: List[Dict[str, str]],
+             temperature: float = 0.2,
+             max_tokens: int = 300) -> Optional[str]:
+    host    = _env("HCX_HOST", "https://clovastudio.stream.ntruss.com")
+    model   = _env("HCX_MODEL", "HCX-DASH-002")
+    api_key = _env("HCX_API_KEY")
+    req_id  = _env("HCX_REQUEST_ID", "mindway-helper")
+    timeout = int(_env("HCX_TIMEOUT", "20") or "20")
+
+    if not api_key:
+        raise RuntimeError("HCX_API_KEY 가 비어있습니다. .env를 확인하세요.")
 
     url = f"{host}/v3/chat-completions/{model}"
     headers = {
         "Authorization": api_key,
-        "X-NCP-CLOVASTUDIO-REQUEST-ID": request_id,
+        "X-NCP-CLOVASTUDIO-REQUEST-ID": req_id,
         "Content-Type": "application/json; charset=utf-8",
-        "Accept": "text/event-stream",
     }
-
     payload = {
         "messages": messages,
-        "topP": float(_env("HCX_TOP_P", "0.8")),
-        "topK": int(_env("HCX_TOP_K", "0")),
-        "maxTokens": int(_env("HCX_MAX_TOKENS", "256")),
-        "temperature": float(_env("HCX_TEMPERATURE", "0.5")),
-        "repetitionPenalty": float(_env("HCX_REP_PENALTY", "1.1")),
-        "stop": [],
-        "seed": int(_env("HCX_SEED", "0")),
-        "includeAiFilters": True,
+        "temperature": temperature,
+        "maxTokens": max_tokens,
     }
 
-    # ... (팀장님의 기존 SSE 파싱 및 스트리밍 로직 100% 유지)
-    last_content = ""
-    final_content = ""
-    last_finish_reason = None
+    t0  = time.time()
+    res = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    if not res.ok:
+        raise RuntimeError("HCX HTTP 실패: " + str(res.status_code) + " " + res.text[:200])
 
-    with requests.post(url, headers=headers, json=payload, stream=True, timeout=timeout) as r:
-        if not r.ok:
-            raise RuntimeError(f"HCX HTTP 실패: {r.status_code} {r.text}")
+    data = res.json()
+    content = None
+    try:
+        content = data["result"]["message"]["content"]
+    except Exception:
+        pass
+    if content is None:
+        try:
+            content = data["choices"][0]["message"]["content"]
+        except Exception:
+            pass
+    return content
 
-        for raw in r.iter_lines(decode_unicode=True):
-            if not raw: continue
-            line = raw.strip()
-            if not line.startswith("data:"): continue
-            data_str = line[len("data:"):].strip()
-            if not (data_str.startswith("{") and data_str.endswith("}")): continue
+# =========================================================
+# HCX 분석 + 재시도
+# =========================================================
+def analyze_with_hcx(client_text: str,
+                     history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+    history_block = ""
+    if history:
+        history_block = "\n".join(
+            [("[상담사]" if h.get("role") == "counselor" else "[내담자]") + " " + h.get("text", "")
+             for h in history[-4:]]
+        )
 
-            try:
-                obj = json.loads(data_str)
-            except Exception: continue
+    user_content = "[이전 대화]\n" + (history_block or "(없음)") + "\n\n[현재 내담자 발화]\n" + client_text.strip()
 
-            msg = obj.get("message") or {}
-            content = msg.get("content")
-            finish = obj.get("finishReason")
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user",   "content": user_content},
+    ]
 
-            if isinstance(content, str) and content:
-                last_content = content
-            if finish:
-                last_finish_reason = finish
-            if finish == "stop":
-                final_content = last_content
-                break
+    # 1차 시도
+    content = call_hcx(messages, temperature=0.2, max_tokens=300)
+    obj = safe_json_extract(content)
+    if obj and check_completeness(obj):
+        return obj
 
-    if not final_content:
-        final_content = last_content
+    time.sleep(0.15)
 
-    return {
-        "mode": "HCX",
-        "suggestion": final_content.strip(),
-        "finishReason": last_finish_reason,
-    }
+    # 2차 재시도 (temperature=0 으로 형식 고정)
+    content = call_hcx(messages, temperature=0.0, max_tokens=300)
+    obj = safe_json_extract(content)
+    if obj and check_completeness(obj):
+        return obj
 
+    return None
+
+# =========================================================
+# 엔드포인트
+# =========================================================
 @router.post("/suggestion")
 def helper_suggestion(payload: HelperRequest):
-    # 1. 룰 기반 우선 체크 (기존 NEG_KEYS 활용)
-    base = rule_helper(payload.last_client_text)
+    text = (payload.last_client_text or "").strip()
 
-    # 2. HCX 사용 여부 확인
+    # 1단계: 룰 기반 1차 필터
+    rule = rule_check(text)
+    if rule.get("skip_hcx"):
+        return rule
+
     use_hcx = _env("USE_HCX", "0") == "1"
     if not use_hcx:
-        # 룰 기반일 때도 프론트엔드 규격(churn_signal)을 맞춰주기 위해 0 추가
-        base["churn_signal"] = 0
-        return base
+        rule["mode"] = "RULE_ONLY"
+        return rule
 
+    # 2단계: HCX 심층 분석
     try:
-        # [92% 성능 검증된 시스템 프롬프트]
-        # 모델이 [1] 또는 [0]을 먼저 답변하도록 설계
-        system = (
-            "너는 상담사를 돕는 전문 헬퍼야. 내담자의 발화를 분석해서 "
-            "이탈 징후가 보이면 [1], 아니면 [0]을 문장 맨 앞에 반드시 적고, "
-            "그 뒤에 상담사가 바로 사용할 수 있는 공감 멘트와 질문을 제안해줘. "
-            "다른 설명은 하지 마."
-        )
-        
-        messages = [
-            {"role": "system", "content": system},
-            {"role": "user", "content": f"내담자: {payload.last_client_text}"}
-        ]
-        
-        # 기존에 만들어두신 call_hcx_sse 함수 호출
-        hcx_res = call_hcx_sse(messages)
-        full_text = hcx_res.get("suggestion", "")
+        obj = analyze_with_hcx(text, payload.history)
+        if obj is None:
+            result = _fallback_result("JSON 파싱 실패")
+        else:
+            risk_level = obj.get("risk", {}).get("level", "Normal")
+            churn = 1 if risk_level in ("Caution", "High") else 0
 
-        # 3. 휘발성 데이터 분석 (DB 저장 X)
-        # 텍스트 내에 [1]이 있으면 이탈 징후로 판단
-        is_churn = 1 if "[1]" in full_text else 0
-        
-        # 화면에 뿌릴 가이드 텍스트 정제 (태그 제거)
-        clean_suggestion = full_text.replace("[1]", "").replace("[0]", "").strip()
+            # 룰에서 감지된 churn_signal 이 더 높으면 유지
+            churn = max(churn, rule.get("churn_signal", 0))
 
-        # 4. 프론트엔드로 즉시 반환 (Response)
-        return {
-            "mode": "HCX",
-            "churn_signal": is_churn,       # 1번 기능: 실시간 넛지 신호
-            "suggestion": clean_suggestion, # 2번 기능: 대응 스크립트
-            "type": "CHURN_ALERT" if is_churn else "NORMAL"
-        }
+            result = {
+                "mode": "HCX",
+                "churn_signal": churn,
+                "type": "CHURN_ALERT" if churn else "NORMAL",
+                "insight":     obj.get("insight", ""),
+                "emotions":    obj.get("emotions", []),
+                "intent":      obj.get("intent", ""),
+                "risk":        obj.get("risk", {}),
+                "suggestions": obj.get("suggestions", []),
+            }
 
     except Exception as e:
-        # 에러 발생 시 룰 기반으로 안전하게 후퇴(Fallback)
-        base["hcx_error"] = str(e)
-        base["churn_signal"] = 0
-        return base
+        result = _fallback_result(str(e))
+
+    return result
