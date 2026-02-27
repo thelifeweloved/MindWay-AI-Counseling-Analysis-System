@@ -13,8 +13,8 @@ import uuid
 import hashlib
 from db import get_db
 from routers.helper import router as helper_router
-from routers.analysis_services.runner import run_core_features
-from routers.analysis_services.clova_client import ClovaXClient
+# from routers.analysis_services.runner import run_core_features
+# from routers.analysis_services.clova_client import ClovaXClient
 
 load_dotenv()
 app = FastAPI(title="Mindway Post-Analysis API", version="1.1.2")
@@ -85,6 +85,15 @@ class SessionCloseRequest(BaseModel):
     sat:         Optional[int] = Field(None, ge=0, le=1)
     sat_note:   Optional[str] = None
 
+class NoteUpdateRequest(BaseModel):
+    topic_id: Optional[int] = Field(1, ge=1)
+    note: str
+
+# [추가됨] Appt.html 예약 상태 및 배정 상담사 변경용 모델
+class ApptUpdateRequest(BaseModel):
+    counselor_id: Optional[int] = None
+    status: Optional[str] = None
+
 # ---------------------------------------------------------
 # Helpers & Logic
 # ---------------------------------------------------------
@@ -133,7 +142,6 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
             db.execute(text(sql), params)
 
         elif role == "client":
-            # 테이블 명세서 제약 조건에 맞게 email, pwd 필수 확인 로직 적용
             if not payload.email or not payload.pwd:
                 raise HTTPException(status_code=400, detail="내담자 이메일과 비밀번호는 필수입니다.")
 
@@ -179,7 +187,6 @@ def counselor_login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 @app.post("/client/login")
 def client_login(payload: ClientLoginRequest, db: Session = Depends(get_db)):
-    # 프론트엔드 연동 규격에 맞춰 email, pwd 대조 방식으로 수정
     row = db.execute(text("""
         SELECT id, name, code FROM client
         WHERE email = :email AND pwd = :pwd AND active = TRUE LIMIT 1
@@ -239,18 +246,19 @@ def list_sessions(counselor_id: Optional[int] = Query(None, ge=1), limit: int = 
 def create_message(payload: MessageCreate, db: Session = Depends(get_db)):
     try:
         res = db.execute(text("""
-            INSERT INTO msg (sess_id, sender_type, sender_id, text, emoji, file_url, stt_conf, at)
-            VALUES (:sid, :speaker, :speaker_id, :text, :emoji, :file_url, :stt_conf, NOW())
+            INSERT INTO msg (sess_id, sender_type, sender_id, text, file_url, at)
+            VALUES (:sid, :speaker, :speaker_id, :text, :file_url, NOW())
         """), {
             "sid": payload.sess_id, "speaker": payload.speaker,
             "speaker_id": None if payload.speaker == "SYSTEM" else payload.speaker_id,
-            "text": payload.text, "emoji": payload.emoji, "file_url": payload.file_url, "stt_conf": payload.stt_conf
+            "text": payload.text, "file_url": payload.file_url
         })
         msg_id = res.lastrowid
-        db.commit() # 외래키 참조 에러 방지를 위한 선 커밋 로직 추가
+        db.commit() 
 
         detection = None
-        if payload.speaker == "CLIENT":
+        # [수정됨] 이미지 데이터(Base64)인 경우 감정 분석 및 이탈 신호 감지를 건너뜀
+        if payload.speaker == "CLIENT" and payload.text and not payload.text.startswith("data:image"):
             detection = detect_dropout_signal(payload.text)
             if detection:
                 db.execute(text("""
@@ -262,7 +270,6 @@ def create_message(payload: MessageCreate, db: Session = Depends(get_db)):
                     "rule": detection["rule"], "action": detection["action"]
                 })
                 
-        if payload.speaker == "CLIENT" and payload.text:
             _t = payload.text
             _high  = ["죽고싶", "자해", "사라지고싶", "없어지고싶", "끝내고싶"]
             _neg   = ["그만", "포기", "싫어", "힘들", "못하겠", "의미없", "안 할래"]
@@ -298,7 +305,7 @@ def session_dashboard(sess_id: int, db: Session = Depends(get_db)):
     risk_score = float(db.execute(text("SELECT COALESCE(AVG(score), 0) FROM alert WHERE sess_id = :sid"), {"sid": sess_id}).scalar() or 0.0)
     topic_analysis = db.execute(text("""
         SELECT sa.topic_id, t.name as topic_name, sa.summary, sa.note
-        FROM sess_analysis sa JOIN topic t ON sa.topic_id = t.id WHERE sa.sess_id = :sid
+        FROM sess_analysis sa LEFT JOIN topic t ON sa.topic_id = t.id WHERE sa.sess_id = :sid
     """), {"sid": sess_id}).mappings().all()
 
     total_alerts = int(db.execute(text("SELECT COUNT(*) FROM alert WHERE sess_id = :sid"), {"sid": sess_id}).scalar() or 0)
@@ -309,11 +316,13 @@ def session_dashboard(sess_id: int, db: Session = Depends(get_db)):
     """), {"sid": sess_id}).mappings().all()
     alert_types = [{"type": r["type"], "cnt": int(r["cnt"])} for r in alert_types_rows]
 
-    quality = None
+    # [수정됨] SessionDetail.html 리포트 출력을 위한 quality 데이터 매핑
+    quality = {"flow": 0.0, "score": 0.0, "churn_prob": risk_score}
     try:
         quality_row = db.execute(text("SELECT flow, score FROM quality WHERE sess_id = :sid LIMIT 1"), {"sid": sess_id}).mappings().first()
         if quality_row:
-            quality = {"flow": float(quality_row["flow"] or 0), "score": float(quality_row["score"] or 0)}
+            quality["flow"] = float(quality_row["flow"] or 0)
+            quality["score"] = float(quality_row["score"] or 0)
     except: pass
 
     return {
@@ -329,9 +338,9 @@ def session_dashboard(sess_id: int, db: Session = Depends(get_db)):
 @app.get("/sessions/{sess_id}/messages")
 def session_messages(sess_id: int, limit: int = Query(200, ge=1), db: Session = Depends(get_db)):
     result = db.execute(text("""
-        SELECT id, sess_id, sender_type AS speaker, sender_id AS speaker_id, text, emoji, file_url, stt_conf, at 
-        FROM msg 
-        WHERE sess_id = :sid ORDER BY at DESC LIMIT :l
+        SELECT id, sess_id, sender_type AS speaker, sender_id AS speaker_id, text, file_url, at
+        FROM msg
+        WHERE sess_id = :sid ORDER BY at ASC LIMIT :l
     """), {"sid": sess_id, "l": limit}).mappings().all()
     return {"items": jsonable_encoder(list(result))}
 
@@ -352,9 +361,45 @@ def session_emotions(sess_id: int, db: Session = Depends(get_db)):
     return {"items": jsonable_encoder(list(result))}
 
 @app.get("/appointments")
-def get_appointments(counselor_id: int = Query(..., ge=1), db: Session = Depends(get_db)):
-    sql = "SELECT a.id, a.counselor_id, c.name AS client_name, a.at, a.status, c.status AS client_grade FROM appt a JOIN client c ON a.client_id = c.id WHERE a.counselor_id = :cid ORDER BY a.at ASC"
-    return {"items": jsonable_encoder(list(db.execute(text(sql), {"cid": counselor_id}).mappings().all()))}
+def get_appointments(counselor_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    sql = """
+        SELECT a.id, a.counselor_id, c.name AS client_name, a.at, a.status, a.created_at
+        FROM appt a 
+        JOIN client c ON a.client_id = c.id 
+        WHERE (:cid IS NULL OR a.counselor_id = :cid) 
+        ORDER BY a.at ASC
+    """
+    result = db.execute(text(sql), {"cid": counselor_id}).mappings().all()
+    return {"items": jsonable_encoder(list(result))}
+
+@app.get("/counselors")
+def get_counselors(db: Session = Depends(get_db)):
+    sql = "SELECT id, name FROM counselor"
+    result = db.execute(text(sql)).mappings().all()
+    return {"items": jsonable_encoder(list(result))}
+
+# [추가됨] Appt.html 예약 상태 및 배정 상담사 변경 로직
+@app.patch("/appointments/{appt_id}")
+def update_appointment(appt_id: int, payload: ApptUpdateRequest, db: Session = Depends(get_db)):
+    try:
+        fields = {}
+        if payload.counselor_id is not None:
+            fields["counselor_id"] = payload.counselor_id
+        if payload.status is not None:
+            fields["status"] = payload.status
+            
+        if not fields:
+            raise HTTPException(status_code=400, detail="업데이트할 항목이 없습니다.")
+            
+        set_clause = ", ".join([f"{k} = :{k}" for k in fields])
+        fields["appt_id"] = appt_id
+        
+        db.execute(text(f"UPDATE appt SET {set_clause} WHERE id = :appt_id"), fields)
+        db.commit()
+        return {"status": "updated"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ---------------------------------------------------------
 # Stats APIs
@@ -387,7 +432,7 @@ def quality_trend(counselor_id: int = Query(..., ge=1), db: Session = Depends(ge
     """
     result = db.execute(text(sql), {"cid": counselor_id}).mappings().all()
     formatted = [{
-        "date_label":        r["date_label"].strftime('%m-%d'),
+        "date_label":        r["date_label"].strftime('%m-%d') if hasattr(r["date_label"], "strftime") else str(r["date_label"]),
         "avg_sat_rate":      float(r["avg_sat_rate"]      or 0),
         "avg_risk_score":    float(r["avg_risk_score"]    or 0),
         "avg_flow":          float(r["avg_flow"]          or 0),
@@ -415,7 +460,6 @@ def stats_monthly_growth(counselor_id: int = Query(..., ge=1), db: Session = Dep
     sql = "SELECT DATE_FORMAT(s.start_at, '%Y-%m') AS month, COUNT(*) AS total, (COUNT(CASE WHEN s.end_reason='DROPOUT' THEN 1 END) / NULLIF(COUNT(*),0)) * 100 AS dropout_rate FROM sess s WHERE s.counselor_id = :cid GROUP BY month ORDER BY month ASC"
     return {"items": jsonable_encoder(list(db.execute(text(sql), {"cid": counselor_id}).mappings().all()))}
 
-
 # ---------------------------------------------------------
 # 얼굴 감정 분석 저장 및 동의, STT, Quality 연동 API
 # ---------------------------------------------------------
@@ -438,7 +482,6 @@ def save_face(payload: FaceSaveRequest, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback(); raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.patch("/sessions/{sess_id}/consent")
 def update_consent(sess_id: int, payload: ConsentRequest, db: Session = Depends(get_db)):
     try:
@@ -452,7 +495,6 @@ def update_consent(sess_id: int, payload: ConsentRequest, db: Session = Depends(
     except Exception as e:
         db.rollback(); raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.get("/sessions/{sess_id}/consent")
 def get_consent(sess_id: int, db: Session = Depends(get_db)):
     row = db.execute(text("SELECT ok_text, ok_voice, ok_face FROM sess WHERE id = :sid"), {"sid": sess_id}).mappings().first()
@@ -461,7 +503,6 @@ def get_consent(sess_id: int, db: Session = Depends(get_db)):
 
 @app.get("/stats/recent-alerts")
 def recent_alerts(counselor_id: int = Query(..., ge=1), db: Session = Depends(get_db)):
-    # 프론트엔드 Main.html 연동을 위해 action 필드를 reasonMsg 별칭으로 조회하도록 변경
     sql = """
         SELECT a.id, a.sess_id, a.msg_id, a.type, a.status, a.score, a.rule, a.at, a.action AS reasonMsg,
                c.name AS client_name
@@ -472,25 +513,25 @@ def recent_alerts(counselor_id: int = Query(..., ge=1), db: Session = Depends(ge
     result = db.execute(text(sql), {"cid": counselor_id}).mappings().all()
     return {"items": jsonable_encoder(list(result))}
 
-
 # UC-07: 상담사 의견 메모 저장 (sess_analysis.note 업데이트)
-class NoteUpdateRequest(BaseModel):
-    topic_id: int = Field(..., ge=1)
-    note: str
-
 @app.patch("/sessions/{sess_id}/analysis")
 def update_analysis_note(sess_id: int, payload: NoteUpdateRequest, db: Session = Depends(get_db)):
     try:
+        tid = payload.topic_id or 1
         row = db.execute(text("""
             SELECT id FROM sess_analysis WHERE sess_id = :sid AND topic_id = :tid
-        """), {"sid": sess_id, "tid": payload.topic_id}).scalar()
+        """), {"sid": sess_id, "tid": tid}).scalar()
 
         if not row:
-            raise HTTPException(status_code=404, detail="해당 세션/토픽의 분석 데이터가 없습니다.")
-
-        db.execute(text("""
-            UPDATE sess_analysis SET note = :note WHERE sess_id = :sid AND topic_id = :tid
-        """), {"note": payload.note, "sid": sess_id, "tid": payload.topic_id})
+            db.execute(text("""
+                INSERT INTO sess_analysis (sess_id, topic_id, summary, note)
+                VALUES (:sid, :tid, '', :note)
+            """), {"note": payload.note, "sid": sess_id, "tid": tid})
+        else:
+            db.execute(text("""
+                UPDATE sess_analysis SET note = :note WHERE sess_id = :sid AND topic_id = :tid
+            """), {"note": payload.note, "sid": sess_id, "tid": tid})
+            
         db.commit()
         return {"status": "saved"}
     except HTTPException:
@@ -511,7 +552,6 @@ def save_quality(sess_id: int, payload: QualityCreate, db: Session = Depends(get
     except Exception as e:
         db.rollback(); raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.post("/stt")
 def create_stt(payload: SttCreate, db: Session = Depends(get_db)):
     try:
@@ -526,7 +566,6 @@ def create_stt(payload: SttCreate, db: Session = Depends(get_db)):
         return {"status": "saved"}
     except Exception as e:
         db.rollback(); raise HTTPException(status_code=400, detail=str(e))
-
 
 @app.post("/sessions/{sess_id}/close")
 def close_session(sess_id: int, payload: SessionCloseRequest, db: Session = Depends(get_db)):
@@ -575,26 +614,30 @@ def close_session(sess_id: int, payload: SessionCloseRequest, db: Session = Depe
 
         db.commit()
 
-        try:
-            clova = ClovaXClient(
-                api_key=os.getenv("CLOVA_API_KEY", ""),
-                endpoint_id=os.getenv("CLOVA_ENDPOINT_ID", ""),
-            )
-            run_core_features(
-                clova,
-                sess_id=sess_id,
-                topic_id=1,
-                host=os.getenv("DB_HOST", "localhost"),
-                port=int(os.getenv("DB_PORT", 3307)),
-                user=os.getenv("DB_USER", ""),
-                password=os.getenv("DB_PASSWORD", ""),
-                database=os.getenv("DB_NAME", ""),
-            )
-        except Exception as e_run:
-            print(f"[runner 트리거 실패] {e_run}")
+        # try:
+        #     clova = ClovaXClient(
+        #         api_key=os.getenv("CLOVA_API_KEY", ""),
+        #         endpoint_id=os.getenv("CLOVA_ENDPOINT_ID", ""),
+        #     )
+        #     run_core_features(
+        #         clova,
+        #         sess_id=sess_id,
+        #         topic_id=1,
+        #         host=os.getenv("DB_HOST", "localhost"),
+        #         port=int(os.getenv("DB_PORT", 3307)),
+        #         user=os.getenv("DB_USER", ""),
+        #         password=os.getenv("DB_PASSWORD", ""),
+        #         database=os.getenv("DB_NAME", ""),
+        #     )
+        # except Exception as e_run:
+        #     print(f"[runner 트리거 실패] {e_run}")
 
         return {"status": "closed", "sess_id": sess_id, "end_reason": payload.end_reason}
 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)

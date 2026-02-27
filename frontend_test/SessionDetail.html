@@ -1,674 +1,363 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindWay - 세션 분석 상세</title>
+    <title>세션 리포트 - MindWay</title>
+    
+    <script src="./config.js"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
-        body { display: flex; background-color: #f8f9fa; height: 100vh; overflow: hidden; }
+        /* Ian님의 원본 스타일 - 절대 수정하지 않음 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; padding: 24px; color: #333; line-height: 1.5; }
+        .report-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 
-        .sidebar {
-            width: 280px;
-            background-color: #373f50;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            padding: 40px 20px;
-            flex-shrink: 0;
-            position: relative;
-            transition: width 0.3s ease;
-            overflow: hidden;
-        }
-        .sidebar.collapsed { width: 72px; padding: 40px 12px; }
-        .sidebar.collapsed .sidebar-header,
-        .sidebar.collapsed .sidebar-header-inner,
-        .sidebar.collapsed .menu-label,
-        .sidebar.collapsed .nav-text,
-        .sidebar.collapsed .nav-arrow,
-        .sidebar.collapsed .btn-text { display: none !important; }
-        .sidebar.collapsed .nav-item { justify-content: center; padding: 12px; }
-        .sidebar.collapsed .settings-btn,
-        .sidebar.collapsed .logout-btn { justify-content: center; padding: 15px 12px; }
-        .sidebar-toggle {
-            position: absolute; top: 24px; right: 12px;
-            width: 28px; height: 28px; border-radius: 50%;
-            background-color: #40444e; border: 1px solid rgba(255,255,255,0.1);
-            color: white; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; z-index: 100; transition: background-color 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-        .sidebar-toggle:hover { background-color: #4a4e5a; }
-
-        .sidebar-header {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 40px;
-            width: 100%;
-        }
-        .sidebar-header-inner {
-            display: inline-block;
-            text-align: left;
-        }
-        .brand-name {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 1.6rem;
-            font-weight: 300;
-            margin-bottom: 12px;
-            padding: 0;
-            letter-spacing: 0.35em;
-            text-transform: uppercase;
-            color: #E5C76B;
-            opacity: 0.95;
-            white-space: nowrap;
-        }
-        .user-profile {
-            padding: 0;
-            text-align: left;
-            width: 100%;
-        }
-        .user-name {
-            font-size: 0.95rem;
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-        .user-email {
-            font-size: 0.75rem;
-            opacity: 0.6;
-        }
-        .menu-label {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.4);
-            margin-bottom: 15px;
-            padding-left: 10px;
-            text-transform: uppercase;
-        }
-        .nav-menu {
-            list-style: none;
-            flex-grow: 1;
-        }
-        .nav-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 15px;
+        .report-ai-notice {
+            background: #f0f4ff;
+            border: 1px solid #d0d9f7;
             border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: 0.2s;
-            gap: 10px;
-        }
-        .nav-item span.nav-text {
-            flex: 1;
-            text-align: left;
-        }
-        .nav-item.active {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-        .settings-btn {
-            margin-top: auto;
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        .settings-btn:hover {
-            color: white;
-        }
-        .logout-btn {
-            margin-top: 0;
-            color: #ff9a9a;
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .main-content {
-            flex-grow: 1;
-            min-width: 0;
-            padding: 24px 32px;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-        .header h2 { flex-shrink: 0; font-size: 1.5rem; }
-        .btn-back {
-            padding: 10px 16px;
-            background: #373f50;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-back:hover { background: #2c3442; }
-
-        .analysis-card {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            padding: 12px 16px;
             margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #444;
+            line-height: 1.5;
         }
-        .analysis-card h3 {
-            font-size: 1.1rem;
-            color: #333;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px dashed #eee;
+        .report-ai-notice i { color: #7389f4; margin-right: 8px; }
+
+        .report-header { text-align: center; border-bottom: 2px solid #373f50; padding-bottom: 20px; margin-bottom: 28px; }
+        .report-title { font-size: 1.5rem; color: #373f50; margin-bottom: 8px; }
+        .report-meta { font-size: 0.9rem; color: #666; margin-bottom: 12px; }
+        .report-satisfaction { font-size: 1rem; font-weight: 600; margin-top: 8px; }
+        .report-satisfaction .sat-badge { display: inline-block; padding: 8px 20px; border-radius: 8px; font-size: 1rem; }
+        .report-satisfaction .sat-satisfied { background: #e8f5e9; color: #2e7d32; }
+        .report-satisfaction .sat-unsatisfied { background: #ffebee; color: #c62828; }
+        .report-satisfaction .sat-none { background: #f5f5f5; color: #616161; }
+        .report-stage { font-size: 0.9rem; color: #555; margin-top: 6px; }
+        .report-stage strong { color: #373f50; }
+
+        .report-section { margin-bottom: 28px; }
+        .report-section h3 { font-size: 1rem; color: #373f50; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+        .report-section h3 .required-asterisk { color: #e74c3c; font-weight: 700; margin-right: 4px; }
+        .report-section h3 .required-label { font-size: 0.8rem; color: #888; font-weight: 500; margin-left: 6px; }
+        .topic-keywords-box {
+            background: #f0f4ff;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e0e6f5;
+            margin-bottom: 0;
         }
-        .analysis-row {
-            margin-bottom: 16px;
-        }
-        .analysis-row:last-child { margin-bottom: 0; }
-        .analysis-label {
-            font-size: 0.8rem;
-            color: #888;
-            margin-bottom: 4px;
-        }
-        .analysis-value {
+        .topic-keywords-box .topic-line { font-size: 0.95rem; color: #373f50; font-weight: 600; margin-bottom: 10px; }
+        .topic-keywords-box .topic-line span { color: #666; font-weight: 500; margin-right: 6px; }
+        .keyword-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .keyword-tags .tag { display: inline-block; padding: 6px 12px; background: #fff; border: 1px solid #7389f4; color: #7389f4; border-radius: 20px; font-size: 0.85rem; }
+        
+        .ai-summary-box {
+            background: #f9faff;
+            padding: 16px;
+            border-radius: 8px;
             font-size: 0.95rem;
-            color: #333;
             line-height: 1.6;
+            color: #444;
+            min-height: 120px;
             white-space: pre-wrap;
+            border: 1px solid #e8ecf4;
         }
-        .note-input {
+        .counselor-note-input {
             width: 100%;
-            min-height: 100px;
-            padding: 14px;
-            border: 1px solid #e1e5ee;
-            border-radius: 10px;
+            min-height: 160px;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-family: inherit;
             font-size: 0.95rem;
             line-height: 1.6;
             resize: vertical;
             outline: none;
             transition: border-color 0.2s;
+            background: #fffcf0;
         }
-        .note-input:focus {
+        .counselor-note-input:focus {
             border-color: #7389f4;
-            box-shadow: 0 0 0 3px rgba(115, 137, 244, 0.1);
+            box-shadow: 0 0 0 2px rgba(115, 137, 244, 0.15);
         }
-        .note-row {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-            margin-top: 8px;
-        }
-        .btn-save {
-            padding: 10px 18px;
-            background: #7389f4;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            flex-shrink: 0;
-            transition: background 0.2s;
-        }
-        .btn-save:hover { background: #5d74e3; }
-        .btn-save.saved {
-            background: #27ae60;
-            cursor: default;
-        }
-        .analysis-meta {
-            font-size: 0.75rem;
-            color: #999;
-            margin-top: 8px;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
+        .counselor-note-input::placeholder { color: #999; }
 
-        /* text_emotion 리포트 */
-        .emotion-report {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-            margin-bottom: 24px;
-            border-left: 4px solid #E5C76B;
-        }
-        .emotion-report h3 {
-            font-size: 1.1rem;
-            color: #333;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px dashed #eee;
-        }
-        .emotion-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-        .emotion-table th {
-            text-align: left;
-            padding: 10px 12px;
-            color: #999;
-            border-bottom: 1px solid #eee;
-        }
-        .emotion-table td {
-            padding: 12px;
-            border-bottom: 1px solid #f8f9fa;
-        }
-        .emotion-table tr:hover { background-color: #f9faff; }
-        .emotion-label { font-weight: 600; color: #333; }
-        .emotion-score { font-family: monospace; font-weight: 700; }
-        .emotion-score.high { color: #e74c3c; }
-        .emotion-score.mid { color: #f39c12; }
-        .emotion-score.low { color: #27ae60; }
-
-        /* 통합 리포트 영역 - 출력용 리포트 형식 */
-        .report-wrapper {
-            display: flex;
-            justify-content: center;
-            padding: 0 0 40px 0;
-        }
-        .report-container {
-            background: white;
-            padding: 36px 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-            width: 100%;
-            max-width: 850px;
-        }
-        .report-header {
-            text-align: center;
-            margin-bottom: 32px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e1e5ee;
-        }
-        .report-header h1 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        .report-header .report-meta {
-            font-size: 0.85rem;
-            color: #888;
-        }
-        .report-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 24px;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .session-metrics {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-        .metric-card {
+        .action-bar {
+            position: sticky;
+            top: 0;
             background: #fff;
-            border: 1px solid #e8eaef;
-            border-radius: 12px;
-            padding: 18px 20px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin: -32px -32px 24px -32px;
+            padding: 16px 32px;
+            border-bottom: 1px solid #eee;
+            z-index: 10;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
         }
-        .metric-card .metric-label {
-            font-size: 0.8rem;
-            color: #8b92a0;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .metric-card .metric-value {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #333;
-        }
-        .report-section {
-            margin-bottom: 28px;
-            page-break-inside: avoid;
-        }
-        .report-section:last-child { margin-bottom: 0; }
-        .report-section h4 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #444;
-            margin-bottom: 14px;
-            padding: 8px 12px;
-            background: #f8f9fa;
-            border-left: 4px solid #E5C76B;
-            border-radius: 4px;
-        }
-        .btn-print {
-            padding: 10px 18px;
-            background: #373f50;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
+        .btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            color: #fff;
         }
-        .btn-print:hover { background: #2c3442; }
+        .btn-download { background: #373f50; }
+        .btn-download:hover { background: #2c3442; }
+        .btn-print { background: #7389f4; }
+        .btn-print:hover { background: #5c73e0; }
+        .btn-back { background: #6c757d; }
+        .btn-back:hover { background: #5a6268; }
+        .btn-save { background: #373f50; }
+        .btn-save:hover { background: #2c3442; }
+        .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-save:disabled:hover { background: #373f50; }
+        .save-bar { margin-top: 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .save-msg {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            color: #2e7d32;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .save-msg.visible { display: inline-flex; }
+
+        /* 감정·발화 지표 스코어 */
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        .metric-card { background: #f9faff; border: 1px solid #e8ecf4; border-radius: 8px; padding: 12px 14px; }
+        .metric-card .metric-label { font-size: 0.8rem; color: #666; margin-bottom: 4px; }
+        .metric-card .metric-value { font-size: 1.1rem; font-weight: 700; color: #373f50; }
+        .metric-card .metric-value .unit { font-size: 0.8rem; font-weight: 500; color: #888; }
+
+        /* 신호 탐지 구간 발화 로그 (overflow: hidden 추가하여 라운드 디자인 보호) */
+        .evidence-table-wrap { overflow: hidden; border: 1px solid #e8ecf4; border-radius: 8px; }
+        .evidence-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .evidence-table th, .evidence-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        .evidence-table th { background: #f5f7fa; color: #373f50; font-weight: 600; }
+        .evidence-table tr:last-child td { border-bottom: none; }
+        .evidence-table .col-time { width: 100px; color: #666; }
+        .evidence-table .col-role { width: 70px; font-weight: 500; color: #555; }
+        .evidence-table .col-utterance { white-space: pre-wrap; word-break: break-word; }
+        .empty-msg { color: #999; font-style: italic; text-align: center; padding: 16px !important; }
 
         @media print {
-            @page {
-                size: A4;
-                margin: 18mm;
-            }
-            body {
-                display: block !important;
-                height: auto !important;
-                overflow: visible !important;
-                background: white !important;
-            }
-            .sidebar,
-            .btn-back,
-            .btn-print,
-            .header .btn-back,
-            #pageTitle,
-            .note-input,
-            .btn-save,
-            .note-row {
-                display: none !important;
-            }
-            .main-content {
-                padding: 0 !important;
-                overflow: visible !important;
-            }
-            .header {
-                margin-bottom: 24px !important;
-                justify-content: center !important;
-                border-bottom: 1px solid #ddd !important;
-                padding-bottom: 16px !important;
-            }
-            .report-wrapper { padding: 0 !important; }
-            .report-container {
-                box-shadow: none !important;
-                padding: 0 !important;
-                max-width: 100% !important;
-                border: none !important;
-            }
-            .report-header {
-                margin-bottom: 24px !important;
-                padding-bottom: 16px !important;
-            }
-            .report-section {
-                page-break-inside: avoid !important;
-            }
-            .analysis-value { white-space: pre-wrap !important; }
-            .note-print {
-                display: block !important;
-                white-space: pre-wrap !important;
-                padding: 10px 0;
-                border: 1px solid #eee;
-                border-radius: 6px;
-                padding: 12px;
-                margin-top: 6px;
-                background: #fafafa;
-                font-size: 0.9rem;
-                line-height: 1.6;
-            }
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
+            body { background: #fff; padding: 0; }
+            .report-container { box-shadow: none; max-width: 100%; }
+            .action-bar, .save-bar { display: none !important; }
+            .report-section { break-inside: avoid; }
         }
     </style>
 </head>
-
 <body>
-    <aside class="sidebar" id="sidebar">
-        <button type="button" class="sidebar-toggle" id="sidebarToggle" title="메뉴 접기/펼치기" aria-label="메뉴 접기">
-            <i class="fa-solid fa-chevron-left"></i>
-        </button>
-        <div class="sidebar-header">
-            <div class="sidebar-header-inner">
-                <div class="brand-name">MindWay</div>
-                <div class="user-profile">
-                    <div class="user-name">스노우화이트 상담사</div>
-                    <div class="user-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9dfef2e8f3eef8f1f2efddf0f4f3f9eafce4b3fef2f0">[email&#160;protected]</a></div>
-                </div>
+    <div class="report-container" id="reportContent">
+        <div class="action-bar">
+            <button type="button" class="btn btn-download" id="btnDownload" title="다운로드">
+                <i class="fa-solid fa-download"></i> Download
+            </button>
+            <button type="button" class="btn btn-print" id="btnPrint" title="인쇄">
+                <i class="fa-solid fa-print"></i> 인쇄
+            </button>
+            <a href="Main.html" class="btn btn-back" title="목록으로">
+                <i class="fa-solid fa-arrow-left"></i> 목록
+            </a>
+        </div>
+
+        <div class="report-ai-notice" role="note">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            본 리포트는 AI 기반 분석 데이터로, 상담 품질 향상을 위한 참고 자료로 제공됩니다. 최종 판단과 대응은 상담사의 책임 하에 수행되어야 함을 안내드립니다.
+        </div>
+
+        <div class="report-header">
+            <h1 class="report-title">세션 상담 리포트</h1>
+            <p class="report-meta" id="reportMeta">세션 ID: — | 생성일: —</p>
+            <p class="report-stage" id="reportStage">상담 단계: <strong>—</strong></p>
+            <div class="report-satisfaction" id="reportSatisfaction">
+                <span class="sat-badge sat-none" id="satBadge">만족도: 무응답</span>
             </div>
         </div>
-        <div class="menu-label">Main</div>
-        <nav class="nav-menu">
-            <a href="Main.html" class="nav-item">
-                <i class="fa-solid fa-house"></i>
-                <span class="nav-text">Dashboard</span>
-                <i class="fa-solid fa-chevron-up nav-arrow"></i>
-            </a>
-            <a href="Session.html" class="nav-item active">
-                <i class="fa-regular fa-user"></i>
-                <span class="nav-text">Session Report</span>
-                <i class="fa-solid fa-chevron-down nav-arrow"></i>
-            </a>
-        </nav>
-        <a href="#" class="settings-btn"><i class="fa-solid fa-gear"></i><span class="btn-text">&nbsp; Settings</span></a>
-        <a href="#" class="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="btn-text">&nbsp; Logout Account</span></a>
-    </aside>
 
-    <main class="main-content">
-        <header class="header">
-            <h2 id="pageTitle">세션 분석 상세</h2>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button type="button" class="btn-print" onclick="window.print()">
-                    <i class="fa-solid fa-print"></i> 리포트 출력
+        <section class="report-section">
+            <h3>감정 및 발화 지표 스코어</h3>
+            <div class="metrics-grid" id="metricsGrid">
+                <div class="metric-card"><div class="metric-label">감정 스코어</div><div class="metric-value">—</div></div>
+                <div class="metric-card"><div class="metric-label">발화량 지수</div><div class="metric-value">—</div></div>
+                <div class="metric-card"><div class="metric-label">반응 지연도</div><div class="metric-value">—</div></div>
+            </div>
+        </section>
+
+        <section class="report-section">
+            <h3>대표 주제 및 키워드</h3>
+            <div class="topic-keywords-box" id="topicKeywordsBox">
+                <div class="topic-line"><span>대표 주제:</span><span id="topicText">—</span></div>
+                <div class="keyword-tags" id="keywordTags"></div>
+            </div>
+        </section>
+
+        <section class="report-section">
+            <h3>AI 분석 요약 및 상담 참고자료</h3>
+            <div class="ai-summary-box" id="aiSummary">해당 세션의 AI 분석 요약이 없습니다. (추후 DB 연동 시 sess_analysis.summary 등에서 조회)</div>
+        </section>
+
+        <section class="report-section">
+            <h3>신호 탐지 구간 실제 발화 로그</h3>
+            <div class="evidence-table-wrap">
+                <table class="evidence-table" id="evidenceTable">
+                    <thead>
+                        <tr><th class="col-time">시각</th><th class="col-role">구분</th><th class="col-utterance">발화 내용</th></tr>
+                    </thead>
+                    <tbody id="evidenceTableBody">
+                        <tr><td colspan="3" class="empty-msg">해당 구간 발화 로그가 없습니다.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="report-section">
+            <h3><span class="required-asterisk" aria-hidden="true">*</span>상담사 의견<span class="required-label">필수기재</span></h3>
+            <textarea
+                class="counselor-note-input"
+                id="counselorNote"
+                placeholder="상담사의견을 기재"
+            ></textarea>
+            <div class="save-bar">
+                <button type="button" class="btn btn-save" id="btnSave" title="상담사 의견 저장" disabled>
+                    <i class="fa-solid fa-floppy-disk"></i> 저장
                 </button>
-                <a href="Session.html" class="btn-back">
-                    <i class="fa-solid fa-arrow-left"></i> 목록으로
-                </a>
+                <span class="save-msg" id="saveMsg" aria-live="polite">
+                    <i class="fa-solid fa-circle-check"></i> 저장되었습니다
+                </span>
             </div>
-        </header>
+        </section>
+    </div>
 
-        <div class="report-wrapper">
-            <div id="reportContent" class="report-container">
-                <!-- 통합 리포트: text_emotion + sess_analysis -->
-            </div>
-        </div>
-    </main>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessId = urlParams.get('sess_id') || '';
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-        // ★ API 연동: mock 데이터 제거, 실제 DB에서 불러옴
-        const API_BASE_URL = 'http://127.0.0.1:8000';
-
-        const labelKo = { neutral: '중립', anxiety: '불안', sadness: '슬픔', anger: '분노', joy: '기쁨', fear: '공포', happy: '행복', sad: '슬픔', happiness: '행복' };
-
-        // ★ note 저장: main.py에 sess_analysis note 저장 엔드포인트가 없어 현재 세션 내에서만 반영됨
-        // (추후 PATCH /sessions/{sess_id}/analysis 엔드포인트 추가 시 DB 저장 가능)
-        const _noteDraft = {};
-        function saveNote(analysisIdx) {
-            const textarea = document.getElementById('note-' + analysisIdx);
-            const btn = document.querySelector('.btn-save[data-id="' + analysisIdx + '"]');
-            if (!textarea || !btn) return;
-            _noteDraft[analysisIdx] = textarea.value;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> 저장됨';
-            btn.classList.add('saved');
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 저장';
-                btn.classList.remove('saved');
-            }, 2000);
-        }
-
-        function escHtml(s) {
-            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-        function formatTime(iso) {
-            const d = new Date(iso);
-            return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) + ' ' +
-                d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-        }
-
-        async function renderReport(sessId) {
-            document.getElementById('pageTitle').innerText = '세션 S-' + sessId + ' 분석 리포트';
-            const container = document.getElementById('reportContent');
-            container.innerHTML = '<div class="empty-state"><p>불러오는 중...</p></div>';
+        // [핵심] 서버에서 실제 데이터를 가져오는 함수
+        async function fetchReportData() {
+            if (!sessId) return; // 세션 ID가 없으면 기본 HTML 껍데기를 그대로 보여줍니다.
 
             try {
-                // ★ 2개 API 병렬 호출: 텍스트 정서 분석 / 세션 대시보드(만족도·품질·토픽분석)
-                const [emotionRes, dashRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/sessions/${sessId}/emotions`),
-                    fetch(`${API_BASE_URL}/sessions/${sessId}/dashboard`)
+                const [dashRes, msgRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/sessions/${sessId}/dashboard`),
+                    fetch(`${API_BASE_URL}/sessions/${sessId}/messages?limit=100`)
                 ]);
-                const emotionItems = ((await emotionRes.json()).items || [])
-                    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
                 const dash = await dashRes.json();
+                const msgs = await msgRes.json();
 
-                // 만족도
-                const satRaw = dash.session?.sat;
-                const satText = satRaw === 1 || satRaw === true ? '만족'
-                              : satRaw === 0 || satRaw === false ? '불만족' : '—';
+                // 헤더 업데이트
+                document.getElementById('reportMeta').textContent = `세션 ID: S-${sessId} | 생성일: ${new Date(dash.session?.start_at || Date.now()).toLocaleString('ko-KR')}`;
+                document.getElementById('reportStage').innerHTML = `상담 단계: <strong>${dash.session?.stage || '—'}</strong>`;
+                
+                // 만족도 배지 업데이트
+                const satBadge = document.getElementById('satBadge');
+                const sat = dash.session?.sat;
+                if (sat === 1 || sat === true) {
+                    satBadge.textContent = '만족도: 만족';
+                    satBadge.className = 'sat-badge sat-satisfied';
+                } else if (sat === 0 || sat === false) {
+                    satBadge.textContent = '만족도: 불만족';
+                    satBadge.className = 'sat-badge sat-unsatisfied';
+                } else {
+                    satBadge.textContent = '만족도: 무응답';
+                    satBadge.className = 'sat-badge sat-none';
+                }
 
-                // 품질점수 / 흐름점수
-                const flowVal  = dash.quality?.flow  != null ? parseFloat(dash.quality.flow).toFixed(1)  : '—';
-                const scoreVal = dash.quality?.score != null ? parseFloat(dash.quality.score).toFixed(1) : '—';
+                // 스코어 카드 업데이트
+                const quality = dash.quality || {};
+                document.getElementById('metricsGrid').innerHTML = `
+                    <div class="metric-card"><div class="metric-label">감정 스코어</div><div class="metric-value">${quality.score?.toFixed(2) || '—'}</div></div>
+                    <div class="metric-card"><div class="metric-label">발화량 지수</div><div class="metric-value">${quality.flow?.toFixed(0) || '—'}</div></div>
+                    <div class="metric-card"><div class="metric-label">반응 지연도</div><div class="metric-value">${(quality.churn_prob)?.toFixed(2) || '—'}</div></div>
+                `;
 
-                // 1. 텍스트 정서 분석 HTML
-                const emotionHtml = emotionItems.length === 0 ? '' : `
-                    <div class="report-section">
-                        <h4><i class="fa-solid fa-heart-pulse"></i> 1. 텍스트 정서 분석</h4>
-                        <table class="emotion-table">
-                            <thead>
-                                <tr>
-                                    <th>메시지 ID</th>
-                                    <th>정서 라벨</th>
-                                    <th>점수</th>
-                                    <th>생성 시점</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${emotionItems.map(e => {
-                                    const sc = parseFloat(e.score) || 0;
-                                    const scoreClass = sc >= 0.7 ? 'high' : sc >= 0.4 ? 'mid' : 'low';
-                                    return `<tr>
-                                        <td>M-${e.msg_id}</td>
-                                        <td class="emotion-label">${labelKo[e.label] || e.label}</td>
-                                        <td><span class="emotion-score ${scoreClass}">${sc.toFixed(2)}</span></td>
-                                        <td>${formatTime(e.created_at)}</td>
-                                    </tr>`;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
+                // 토픽 및 키워드 업데이트
+                const topic = dash.topic_analysis?.[0] || {};
+                document.getElementById('topicText').textContent = topic.topic_name || '진행 중인 세션';
+                document.getElementById('keywordTags').innerHTML = (topic.keywords || []).map(kw => `<span class="tag">${kw}</span>`).join('');
 
-                // 2. 토픽별 세션 분석 HTML (dashboard의 topic_analysis 사용)
-                const topicItems = dash.topic_analysis || [];
-                const analysisHtml = topicItems.length === 0
-                    ? '<div class="empty-state"><p>해당 세션의 토픽별 분석이 없습니다.</p></div>'
-                    : '<div class="report-section"><h4><i class="fa-solid fa-folder-open"></i> 2. 토픽별 세션 분석</h4>' +
-                      topicItems.map((a, idx) => `
-                        <div class="analysis-card" data-id="${idx}" style="margin-bottom: 20px;">
-                            <h3>${idx + 1}. ${escHtml(a.topic_name || '토픽')}</h3>
-                            <div class="analysis-row">
-                                <div class="analysis-label">AI 분석 요약 (summary)</div>
-                                <div class="analysis-value">${(() => {
-                                    let s = a.summary || '';
-                                    try {
-                                        const parsed = JSON.parse(s);
-                                        s = parsed.summary_md || parsed.summary || s;
-                                    } catch(e) {
-                                        s = s.replace(/^```json\s*/,'').replace(/```$/,'').trim();
-                                        try { s = JSON.parse(s).summary_md || s; } catch(e2) {}
-                                    }
-                                    return escHtml(s);
-                                })()}</div>
-                            </div>
-                            <div class="analysis-row">
-                                <div class="analysis-label">상담사 의견 (note)</div>
-                                <textarea class="note-input" id="note-${idx}" placeholder="상담사 의견을 입력하세요...">${escHtml(a.note || '')}</textarea>
-                                <div class="note-row">
-                                    <button type="button" class="btn-save" data-id="${idx}" onclick="saveNote(${idx})">
-                                        <i class="fa-solid fa-floppy-disk"></i> 저장
-                                    </button>
-                                </div>
-                                <div class="note-print" style="display:none;" id="note-print-${idx}">${escHtml(a.note || '')}</div>
-                            </div>
-                        </div>`).join('') + '</div>';
+                // AI 요약
+                if(topic.summary) {
+                    document.getElementById('aiSummary').textContent = topic.summary;
+                }
 
-                const metricsHtml = `
-                    <div class="session-metrics">
-                        <div class="metric-card">
-                            <div class="metric-label">만족도</div>
-                            <div class="metric-value">${satText}</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">품질점수</div>
-                            <div class="metric-value">${scoreVal}</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">흐름점수</div>
-                            <div class="metric-value">${flowVal}</div>
-                        </div>
-                    </div>`;
+                // 실제 발화 로그 업데이트 (내용이 없을 경우 테이블 내부 tr 삽입으로 라운드 유지)
+                const evidenceBody = document.getElementById('evidenceTableBody');
+                const items = msgs.items || [];
+                if (items.length > 0) {
+                    evidenceBody.innerHTML = items.slice(0, 5).map(m => `
+                        <tr>
+                            <td class="col-time">${new Date(m.at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})}</td>
+                            <td class="col-role">${m.speaker === 'CLIENT' ? '내담자' : '상담사'}</td>
+                            <td class="col-utterance">${m.text}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    evidenceBody.innerHTML = `<tr><td colspan="3" class="empty-msg">해당 구간 발화 로그가 없습니다.</td></tr>`;
+                }
 
-                const reportDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                container.innerHTML = `
-                    <div class="report-header">
-                        <h1>세션 S-${sessId} 통합 분석 리포트</h1>
-                        <div class="report-meta">생성일시: ${reportDate}</div>
-                    </div>
-                    ${metricsHtml}
-                    ${emotionHtml}
-                    ${analysisHtml}`;
+                // 메모 업데이트
+                if (topic.note) {
+                    const noteEl = document.getElementById('counselorNote');
+                    noteEl.value = topic.note;
+                    updateSaveButtonState();
+                }
 
-            } catch (e) {
-                console.error('SessionDetail API 오류:', e);
-                container.innerHTML = '<div class="empty-state"><p>데이터를 불러오지 못했습니다. 서버 연결을 확인해주세요.</p></div>';
+            } catch (error) {
+                console.error("리포트 데이터 로드 실패:", error);
             }
         }
 
-        function updatePrintNote() {
-            document.querySelectorAll('.note-input').forEach(ta => {
-                const id = ta.id.replace('note-', '');
-                const printDiv = document.getElementById('note-print-' + id);
-                if (printDiv) printDiv.textContent = ta.value;
-            });
+        // 상담사 의견란 로직
+        const noteEl = document.getElementById('counselorNote');
+        const btnSaveEl = document.getElementById('btnSave');
+        
+        function updateSaveButtonState() {
+            btnSaveEl.disabled = !(noteEl.value || '').trim();
         }
 
-        const params = new URLSearchParams(window.location.search);
-        const sessId = parseInt(params.get('sess_id') || params.get('id') || '0', 10);
-        if (sessId) {
-            renderReport(sessId);
-        } else {
-            document.getElementById('reportContent').innerHTML = '<div class="empty-state"><p>세션 ID가 없습니다. <a href="Session.html">목록</a>에서 세션을 선택해주세요.</p></div>';
-        }
+        noteEl.addEventListener('input', updateSaveButtonState);
 
-        window.addEventListener('beforeprint', updatePrintNote);
+        // DB 영구 저장 기능 연동
+        btnSaveEl.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/sessions/${sessId}/analysis`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        topic_id: 1, 
+                        note: noteEl.value 
+                    })
+                });
 
-        document.getElementById('sidebarToggle').addEventListener('click', function () {
-            const sidebar = document.getElementById('sidebar');
-            const icon = this.querySelector('i');
-            sidebar.classList.toggle('collapsed');
-            if (sidebar.classList.contains('collapsed')) {
-                icon.className = 'fa-solid fa-chevron-right';
-                this.setAttribute('title', '메뉴 펼치기');
-                this.setAttribute('aria-label', '메뉴 펼치기');
-            } else {
-                icon.className = 'fa-solid fa-chevron-left';
-                this.setAttribute('title', '메뉴 접기');
-                this.setAttribute('aria-label', '메뉴 접기');
+                if (response.ok) {
+                    const saveMsg = document.getElementById('saveMsg');
+                    saveMsg.classList.add('visible');
+                    setTimeout(() => saveMsg.classList.remove('visible'), 3000);
+                } else {
+                    alert('저장에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error("의견 저장 오류:", error);
+                alert('서버 연결에 실패했습니다.');
             }
         });
 
+        // 인쇄 기능
+        document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+        // 페이지 로드 시 API 데이터 가져오기 실행
+        window.addEventListener('DOMContentLoaded', fetchReportData);
     </script>
 </body>
 </html>

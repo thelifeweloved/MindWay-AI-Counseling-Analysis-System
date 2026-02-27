@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindWay - 계정 관리</title>
+    <script src="./config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -177,7 +178,6 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'http://127.0.0.1:8000';
 
         function togglePassword(inputId, icon) {
             const input = inputId ? document.getElementById(inputId) : icon.parentElement.querySelector('input');
@@ -265,6 +265,7 @@
                     // ★ localStorage 저장: Chat_counselor.html에서 counselor_id/name 읽기 위해
                     localStorage.setItem('counselor_id', result.counselor_id);
                     localStorage.setItem('counselor_name', result.counselor_name || '');
+                    localStorage.setItem('counselor_email', email);
 
                     const cid = encodeURIComponent(result.counselor_id);
                     const cname = encodeURIComponent(result.counselor_name || '');
@@ -297,6 +298,7 @@
                     // ★ localStorage 저장: Chat_client.html에서 client_id/name 읽기 위해
                     localStorage.setItem('client_id', result.client_id);
                     localStorage.setItem('client_name', result.client_name || '');
+                    localStorage.setItem('client_email', email);
 
                     location.href = `Chat_client.html?role=client&client_id=${encodeURIComponent(result.client_id)}&client_name=${encodeURIComponent(result.client_name)}`;
                 } else {

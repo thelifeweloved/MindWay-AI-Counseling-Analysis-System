@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindWay - 예약 현황</title>
+    <script src="./config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+        body { display: flex; background-color: #f8f9fa; height: 100vh; overflow: hidden; }
+
+        .sidebar {
+            width: 280px;
+            background-color: #373f50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 40px 20px;
+            flex-shrink: 0;
+            position: relative;
+            transition: width 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar.collapsed { width: 72px; padding: 40px 12px; }
+        .sidebar.collapsed .sidebar-header,
+        .sidebar.collapsed .sidebar-header-inner,
+        .sidebar.collapsed .menu-label,
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .nav-arrow,
+        .sidebar.collapsed .btn-text { display: none !important; }
+        .sidebar.collapsed .sidebar-header { margin-bottom: 20px; }
+        .sidebar.collapsed .sidebar-header-inner { display: none; }
+        .sidebar.collapsed .nav-item { justify-content: center; padding: 12px; }
+        .sidebar.collapsed .settings-btn,
+        .sidebar.collapsed .logout-btn { justify-content: center; padding: 15px 12px; }
+        .sidebar-toggle {
+            position: absolute;
+            top: 24px;
+            right: 12px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #40444e;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .sidebar-toggle:hover { background-color: #4a4e5a; }
+
+        .sidebar-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; width: 100%; }
+        .sidebar-header-inner { display: inline-block; text-align: left; }
+        .brand-name { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 300; margin-bottom: 12px; letter-spacing: 0.35em; text-transform: uppercase; color: #E5C76B; white-space: nowrap; }
+        .user-profile { text-align: left; width: 100%; }
+        .user-name { font-size: 0.95rem; font-weight: 500; margin-bottom: 4px; }
+        .user-email { font-size: 0.75rem; opacity: 0.6; }
+
+        .nav-menu { list-style: none; flex-grow: 0; }
+        .nav-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 15px; border-radius: 8px; margin-bottom: 8px;
+            color: rgba(255,255,255,0.7); text-decoration: none; transition: 0.2s; gap: 10px;
+            cursor: pointer;
+        }
+        .nav-item .nav-text { flex: 1; text-align: left; }
+        .nav-item.active { background-color: rgba(255,255,255,0.1); color: white; }
+        .nav-item:hover:not(.active) { background-color: rgba(255,255,255,0.05); color: white; }
+        .settings-btn { margin-top: auto; display: flex; align-items: center; padding: 15px; color: rgba(255,255,255,0.8); text-decoration: none; font-weight: 500; }
+        .settings-btn:hover { color: white; }
+        .logout-btn { margin-top: 0; color: #ff9a9a; display: flex; align-items: center; padding: 15px; text-decoration: none; font-weight: 500; }
+
+        .main-content { flex-grow: 1; min-width: 0; padding: 24px 32px; overflow: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-title { font-size: 1.5rem; color: #333; }
+        .search-bar { position: relative; width: 100%; max-width: 280px; min-width: 0; }
+        .search-bar input {
+            width: 100%; padding: 7px 36px 7px 14px; border: 1px solid #ddd; border-radius: 8px;
+            outline: none; transition: border-color 0.2s; font-size: 0.9rem; background: #fff;
+        }
+        .search-bar input:focus { border-color: #7389f4; }
+        .search-bar .search-icon {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            color: #aaa; pointer-events: none; font-size: 0.85rem;
+        }
+        .search-bar input:focus ~ .search-icon, .search-bar:focus-within .search-icon { color: #7389f4; }
+
+        .appt-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            padding: 24px;
+            border-left: 4px solid #E5C76B;
+        }
+        .appt-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #eee; flex-wrap: wrap; gap: 12px; }
+        .appt-list-header h3 { margin: 0; font-size: 1rem; color: #373f50; }
+        .appt-header-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .appt-filter-select {
+            padding: 8px 14px; border-radius: 8px; border: 1px solid #e1e5ee; font-size: 0.9rem; color: #555;
+            outline: none; background: #fff; cursor: pointer;
+        }
+        .appt-filter-select:focus { border-color: #7389f4; }
+        #apptStatusFilter option[value="REQUESTED"] { color: #e65100; }
+        #apptStatusFilter option[value="CONFIRMED"] { color: #1565c0; }
+        #apptStatusFilter option[value="COMPLETED"] { color: #2e7d32; }
+        #apptStatusFilter option[value="CANCELLED"] { color: #c62828; }
+        .table-wrap { overflow-x: auto; }
+        .appt-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .appt-table th, .appt-table td { padding: 12px 14px; text-align: center; border-bottom: 1px solid #eee; }
+        .appt-table th { color: #8b92a0; font-weight: 600; }
+        .appt-table tbody tr:hover { background: #f9fafb; }
+        .appt-table .select-wrap { position: relative; display: inline-block; }
+        .appt-table .select-wrap .dropdown-arrow {
+            display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            color: #888; pointer-events: none; font-size: 0.7rem;
+        }
+        .appt-table .select-wrap.active .dropdown-arrow { display: inline-block; }
+        .appt-table .counselor-select,
+        .appt-table .status-select {
+            appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            padding-right: 28px;
+        }
+        .appt-table .counselor-select {
+            padding: 6px 10px; padding-right: 28px; border-radius: 6px; border: 1px solid #e1e5ee; font-size: 0.85rem; color: #555;
+            outline: none; background: #fff; cursor: pointer; min-width: 100px;
+        }
+        .appt-table .counselor-select:focus { border-color: #7389f4; }
+        .appt-table .counselor-select:disabled,
+        .appt-table .status-select:disabled { opacity: 0.85; cursor: not-allowed; }
+        .appt-table .cell-edit-wrap { display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .appt-table .btn-edit-cell {
+            display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+            padding: 0; border: none; border-radius: 6px; background: #f0f0f0; color: #555;
+            cursor: pointer; transition: background 0.2s, color 0.2s; flex-shrink: 0;
+        }
+        .appt-table .btn-edit-cell:hover { background: #7389f4; color: #fff; }
+        .appt-table .btn-edit-cell i { font-size: 0.8rem; }
+        .appt-table .counselor-select option[value=""] { color: #888; }
+        .appt-table .counselor-select option[value="1"],
+        .appt-table .counselor-select option[value="2"] { color: #1565c0; }
+        .appt-table .status-select {
+            padding: 6px 10px; padding-right: 28px; border-radius: 6px; border: 1px solid #e1e5ee; font-size: 0.85rem; color: #555;
+            outline: none; background: #fff; cursor: pointer; min-width: 110px; font-weight: 500;
+        }
+        .appt-table .status-select:focus { border-color: #7389f4; }
+        .appt-table .status-select.status-requested { color: #e65100; }
+        .appt-table .status-select.status-confirmed { color: #1565c0; }
+        .appt-table .status-select.status-completed { color: #2e7d32; }
+        .appt-table .status-select.status-cancelled { color: #c62828; }
+        .appt-table .status-select option[value="REQUESTED"] { color: #e65100; }
+        .appt-table .status-select option[value="CONFIRMED"] { color: #1565c0; }
+        .appt-table .status-select option[value="COMPLETED"] { color: #2e7d32; }
+        .appt-table .status-select option[value="CANCELLED"] { color: #c62828; }
+        .btn-start-chat {
+            display: inline-block; margin-top: 6px; padding: 6px 12px; border-radius: 6px; border: none;
+            background: #7389f4; color: #fff; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            text-decoration: none; transition: background 0.2s;
+        }
+        .btn-start-chat:hover { background: #5c73e0; color: #fff; }
+        .appt-table .cell-time { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 500; }
+        .status-requested { background: #fff3e0; color: #e65100; }
+        .status-confirmed { background: #e3f2fd; color: #1565c0; }
+        .status-completed { background: #e8f5e9; color: #2e7d32; }
+        .status-cancelled { background: #ffebee; color: #c62828; }
+        .empty-msg { color: #999; font-style: italic; padding: 24px; text-align: center; }
+
+        /* KPI 지표 (검색창 밑, 이미지와 동일 배치·크기) */
+        .top-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+        .top-stats .stat-card {
+            background: white;
+            padding: 10px 14px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            border-left: 3px solid #e0e4f0;
+        }
+        .top-stats .stat-card .stat-label {
+            font-size: 0.75rem;
+            color: #8b92a0;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        .top-stats .stat-card .stat-value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #333;
+            line-height: 1.3;
+        }
+        .top-stats .stat-card .stat-label-sub {
+            font-size: 0.7rem;
+            color: #8b92a0;
+            margin-top: 1px;
+        }
+        .top-stats .stat-card.stat-total { border-left-color: #7389f4; }
+        .top-stats .stat-card.stat-unassigned { border-left-color: #e65100; }
+        .top-stats .stat-card.stat-requested { border-left-color: #E5C76B; }
+        .top-stats .stat-card.stat-cancelled { border-left-color: #e74c3c; }
+        @media (max-width: 1200px) {
+            .top-stats { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .top-stats { grid-template-columns: 1fr; }
+        }
+
+        .pagination-wrap { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 20px; }
+        .pagination-wrap .pagination { display: flex; align-items: center; gap: 4px; }
+        .pagination-wrap .page-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 32px; height: 32px; padding: 0 8px;
+            border: none; border-radius: 6px; background: transparent;
+            color: #555; font-size: 0.9rem; cursor: pointer;
+            text-decoration: none; transition: background 0.2s, color 0.2s;
+        }
+        .pagination-wrap .page-btn:hover { background: #f0f0f0; color: #333; }
+        .pagination-wrap .page-btn.active { background: #e8e8e8; color: #333; font-weight: 500; cursor: default; }
+        .pagination-wrap .page-btn.ellipsis { cursor: default; pointer-events: none; }
+        .pagination-wrap .page-btn.ellipsis:hover { background: transparent; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" title="메뉴 접기/펼치기" aria-label="메뉴 접기">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <div class="sidebar-header">
+            <div class="sidebar-header-inner">
+                <div class="brand-name">MindWay</div>
+                <div class="user-profile">
+                    <div class="user-name" id="counselorName"></div>
+                    <div class="user-email" id="displayCounselorEmail"></div>
+                </div>
+            </div>
+        </div>
+        <div class="menu-label">Main</div>
+        <nav class="nav-menu">
+            <a href="Main.html" class="nav-item">
+                <i class="fa-solid fa-house"></i>
+                <span class="nav-text">메인 대시보드</span>
+                <i class="fa-solid fa-chevron-up nav-arrow"></i>
+            </a>
+            <a href="Appt.html" class="nav-item active">
+                <i class="fa-solid fa-calendar-check"></i>
+                <span class="nav-text">예약 현황</span>
+                <i class="fa-solid fa-chevron-down nav-arrow"></i>
+            </a>
+        </nav>
+        <a href="#" class="settings-btn">
+            <i class="fa-solid fa-gear"></i>
+            <span class="btn-text">&nbsp; Settings</span>
+        </a>
+        <a href="Login.html" class="logout-btn" onclick="localStorage.clear();">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span class="btn-text">&nbsp; Logout Account</span>
+        </a>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <h2 class="page-title">예약 현황</h2>
+            <div class="search-bar">
+                <input type="text" id="searchAppt" placeholder="예약번호, 내담자, 예약상태로 검색" autocomplete="off">
+                <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+            </div>
+        </header>
+
+        <div class="top-stats" id="appt-kpi">
+            <div class="stat-card stat-total">
+                <div class="stat-label">총 예약자수</div>
+                <div class="stat-value" id="kpi-total">0</div>
+                <div class="stat-label stat-label-sub">전체 예약</div>
+            </div>
+            <div class="stat-card stat-unassigned">
+                <div class="stat-label">미배정 예약자수</div>
+                <div class="stat-value" id="kpi-unassigned">0</div>
+                <div class="stat-label stat-label-sub">상담사 미배정</div>
+            </div>
+            <div class="stat-card stat-requested">
+                <div class="stat-label">REQUESTED</div>
+                <div class="stat-value" id="kpi-requested">0</div>
+                <div class="stat-label stat-label-sub">신청 대기</div>
+            </div>
+            <div class="stat-card stat-cancelled">
+                <div class="stat-label">CANCELLED</div>
+                <div class="stat-value" id="kpi-cancelled">0</div>
+                <div class="stat-label stat-label-sub">취소된 예약</div>
+            </div>
+        </div>
+
+        <div class="appt-card">
+            <div class="appt-list-header">
+                <h3>상담 예약 목록</h3>
+                <div class="appt-header-filters">
+                    <select class="appt-filter-select" id="apptCounselorFilter" title="상담사 배정 필터">
+                        <option value="">전체</option>
+                        <option value="unassigned">미배정</option>
+                    </select>
+                    <select class="appt-filter-select" id="apptStatusFilter" title="예약상태 필터">
+                        <option value="">전체</option>
+                        <option value="REQUESTED">REQUESTED</option>
+                        <option value="CONFIRMED">CONFIRMED</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                    <select class="appt-filter-select" id="apptSortBy" title="정렬 기준">
+                        <option value="date">날짜별</option>
+                        <option value="time">시간별</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="appt-table" id="apptTable">
+                    <thead>
+                        <tr>
+                            <th>예약 번호</th>
+                            <th>내담자</th>
+                            <th>배정상태</th>
+                            <th>예약 시각</th>
+                            <th>예약 상태</th>
+                            <th>생성 시점</th>
+                        </tr>
+                    </thead>
+                    <tbody id="apptTableBody">
+                        <tr><td colspan="6" class="empty-msg">예약 데이터를 불러오는 중입니다.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination-wrap">
+                <nav class="pagination" id="apptPagination" aria-label="페이지 네비게이션">
+                    </nav>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ★ API 연동 및 MOCK 데이터 제거
+        const counselorId = localStorage.getItem('counselor_id') || '';
+
+        let allAppointments = [];
+        let allCounselors = [];
+        let filteredAppointments = [];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+
+        const statusClass = {
+            REQUESTED: 'status-requested',
+            CONFIRMED: 'status-confirmed',
+            CANCELLED: 'status-cancelled',
+            COMPLETED: 'status-completed'
+        };
+        const tbody = document.getElementById('apptTableBody');
+
+        // 데이터 동시 호출
+        async function loadInitialData() {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">예약 데이터를 불러오는 중입니다.</td></tr>';
+            try {
+                const [apptRes, counselorRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/appointments`),
+                    fetch(`${API_BASE_URL}/counselors`)
+                ]);
+                if (!apptRes.ok || !counselorRes.ok) throw new Error('API fetch failed');
+                
+                const apptData = await apptRes.json();
+                const counselorData = await counselorRes.json();
+
+                allAppointments = apptData.items || [];
+                allCounselors = counselorData.items || [];
+
+                filterAndRender();
+            } catch (error) {
+                console.error("데이터 로드 에러:", error);
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">서버 연결에 실패했습니다.</td></tr>';
+            }
+        }
+
+        // 예약 상태/상담사 수정 API 호출 (main.py에 PATCH /appointments/{appt_id} 필요)
+        async function updateAppointment(apptId, data) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/appointments/${apptId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Update failed');
+                
+                const appt = allAppointments.find(a => a.id === apptId);
+                if (appt) {
+                    if (data.counselor_id !== undefined) {
+                        appt.counselor_id = data.counselor_id;
+                        const counselor = allCounselors.find(c => c.id === data.counselor_id);
+                        appt.counselor_name = counselor ? counselor.name : null;
+                    }
+                    if (data.status !== undefined) {
+                        appt.status = data.status;
+                    }
+                }
+                return true;
+            } catch (error) {
+                console.error('업데이트 에러:', error);
+                alert('업데이트에 실패했습니다.');
+                return false;
+            }
+        }
+
+        // KPI 업데이트
+        function updateApptKpi() {
+            const list = allAppointments || [];
+            document.getElementById('kpi-total').textContent = list.length;
+            document.getElementById('kpi-unassigned').textContent = list.filter(a => a.counselor_id == null).length;
+            document.getElementById('kpi-requested').textContent = list.filter(a => (a.status || '').toUpperCase() === 'REQUESTED').length;
+            document.getElementById('kpi-cancelled').textContent = list.filter(a => (a.status || '').toUpperCase() === 'CANCELLED').length;
+        }
+
+        // 정렬 및 필터 적용
+        function filterAndRender() {
+            const q = (document.getElementById('searchAppt')?.value.trim().toLowerCase()) || '';
+            const counselorFilter = (document.getElementById('apptCounselorFilter')?.value) || '';
+            const statusFilter = (document.getElementById('apptStatusFilter')?.value) || '';
+            const sortBy = (document.getElementById('apptSortBy')?.value) || 'date';
+
+            let list = [...allAppointments];
+
+            if (counselorFilter === 'unassigned') list = list.filter(a => a.counselor_id == null);
+            if (statusFilter) list = list.filter(a => (a.status || '').toUpperCase() === statusFilter);
+            if (q) {
+                list = list.filter(a =>
+                    String(a.id).includes(q) ||
+                    (a.client_name || '').toLowerCase().includes(q) ||
+                    (a.status || '').toLowerCase().includes(q)
+                );
+            }
+
+            const parseAt = (atStr) => {
+                if (!atStr) return { date: 0, time: 0 };
+                const d = new Date(atStr);
+                if (isNaN(d.getTime())) return { date: 0, time: 0 };
+                return { date: d.getTime(), time: d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds() };
+            };
+
+            list.sort((a, b) => {
+                if (sortBy === 'time') {
+                    const ta = parseAt(a.at).time;
+                    const tb = parseAt(b.at).time;
+                    return ta !== tb ? ta - tb : parseAt(a.at).date - parseAt(b.at).date;
+                } else {
+                    return parseAt(b.at).date - parseAt(a.at).date;
+                }
+            });
+
+            filteredAppointments = list;
+            currentPage = 1;
+            renderCurrentPage();
+            updateApptKpi();
+        }
+
+        // 테이블 렌더링
+        function renderCurrentPage() {
+            const paginatedItems = filteredAppointments.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+            if (!paginatedItems || paginatedItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">조건에 맞는 예약이 없습니다.</td></tr>';
+            } else {
+                tbody.innerHTML = paginatedItems.map(a => {
+                    const status = (a.status || '').toUpperCase();
+                    const statusCss = statusClass[status] || '';
+
+                    const counselorOpts = allCounselors.map(c =>
+                        `<option value="${c.id}" ${a.counselor_id == c.id ? 'selected' : ''}>${c.name}</option>`
+                    ).join('');
+                    const counselorSelect = `<select class="counselor-select" data-appt-id="${a.id}" title="배정상태" disabled><option value="">미배정</option>${counselorOpts}</select><span class="dropdown-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>`;
+                    const counselorCell = `<div class="cell-edit-wrap"><div class="select-wrap">${counselorSelect}</div><button type="button" class="btn-edit-cell" title="변경"><i class="fa-solid fa-pen-to-square"></i></button></div>`;
+
+                    const statusOpts = ['REQUESTED', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map(s =>
+                        `<option value="${s}" ${status === s ? 'selected' : ''}>${s}</option>`
+                    ).join('');
+                    const statusSelect = `<select class="status-select ${statusCss}" data-appt-id="${a.id}" title="예약상태" disabled>${statusOpts}</select><span class="dropdown-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>`;
+                    const statusCell = `<div class="cell-edit-wrap"><div class="select-wrap">${statusSelect}</div><button type="button" class="btn-edit-cell" title="변경"><i class="fa-solid fa-pen-to-square"></i></button></div>`;
+
+                    const timeCell = `<div class="cell-time"><span>${a.at || '-'}</span>${status === 'CONFIRMED' ? `<a href="Chat_counselor.html?appt_id=${a.id}&counselor_id=${a.counselor_id}" class="btn-start-chat" title="상담 시작">상담시작</a>` : ''}</div>`;
+
+                    return `<tr><td>${a.id}</td><td>${a.client_name || a.client_id || '-'}</td><td>${counselorCell}</td><td>${timeCell}</td><td>${statusCell}</td><td>${a.created_at || '-'}</td></tr>`;
+                }).join('');
+            }
+            renderPagination();
+        }
+
+        // 동적 페이지네이션 생성
+        function renderPagination() {
+            const paginationContainer = document.getElementById('apptPagination');
+            if (!paginationContainer) return;
+            const totalPages = Math.ceil(filteredAppointments.length / rowsPerPage);
+
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button type="button" class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            }
+
+            if (totalPages > 0) {
+                paginationContainer.innerHTML = `
+                    <button type="button" class="page-btn page-prev" ${currentPage === 1 ? 'disabled' : ''}>&lt;</button>
+                    ${html}
+                    <button type="button" class="page-btn page-next" ${currentPage === totalPages ? 'disabled' : ''}>&gt;</button>
+                `;
+            } else {
+                paginationContainer.innerHTML = '';
+            }
+        }
+
+        // 초기화 및 이벤트 리스너
+        document.addEventListener('DOMContentLoaded', () => {
+            // 사이드바 상담사 이름 동기화
+            const counselorNameEl = document.getElementById('counselorName');
+            const counselorEmailEl = document.querySelector('.user-email');
+            
+
+            loadInitialData();
+
+            document.getElementById('searchAppt')?.addEventListener('input', filterAndRender);
+            document.getElementById('apptSortBy')?.addEventListener('change', filterAndRender);
+            document.getElementById('apptCounselorFilter')?.addEventListener('change', filterAndRender);
+            document.getElementById('apptStatusFilter')?.addEventListener('change', filterAndRender);
+
+            // 드롭다운 편집 버튼 클릭 시 활성화
+            tbody.addEventListener('click', (e) => {
+                const btn = e.target.closest('.btn-edit-cell');
+                if (btn) {
+                    const sel = btn.closest('.cell-edit-wrap').querySelector('select');
+                    if (sel) {
+                        sel.disabled = false;
+                        sel.closest('.select-wrap').classList.add('active');
+                        sel.focus();
+                    }
+                }
+            });
+
+            // 상태 변경 시 서버 업데이트
+            tbody.addEventListener('change', async (e) => {
+                const sel = e.target;
+                if (sel.tagName === 'SELECT') {
+                    const apptId = parseInt(sel.dataset.apptId, 10);
+                    const isCounselorSelect = sel.classList.contains('counselor-select');
+                    const data = {};
+
+                    if (isCounselorSelect) {
+                        data.counselor_id = sel.value ? parseInt(sel.value, 10) : null;
+                    } else {
+                        data.status = sel.value;
+                    }
+
+                    const success = await updateAppointment(apptId, data);
+                    if (success) {
+                        sel.disabled = true;
+                        sel.closest('.select-wrap').classList.remove('active');
+                        if (!isCounselorSelect) sel.className = `status-select ${statusClass[sel.value] || ''}`;
+                        updateApptKpi();
+                    } else {
+                        loadInitialData(); // 실패 시 롤백
+                    }
+                }
+            });
+
+            // 페이지네이션 클릭 처리
+            document.getElementById('apptPagination')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.page-btn');
+                if (!btn || btn.disabled || btn.classList.contains('active')) return;
+
+                if (btn.classList.contains('page-prev')) {
+                    currentPage--;
+                } else if (btn.classList.contains('page-next')) {
+                    currentPage++;
+                } else {
+                    currentPage = parseInt(btn.dataset.page, 10);
+                }
+                renderCurrentPage();
+            });
+
+            // 사이드바 토글
+            document.getElementById('sidebarToggle')?.addEventListener('click', function () {
+                var sidebar = document.getElementById('sidebar');
+                var icon = this.querySelector('i');
+                sidebar.classList.toggle('collapsed');
+                if (sidebar.classList.contains('collapsed')) {
+                    icon.className = 'fa-solid fa-chevron-right';
+                    this.setAttribute('title', '메뉴 펼치기');
+                } else {
+                    icon.className = 'fa-solid fa-chevron-left';
+                    this.setAttribute('title', '메뉴 접기');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

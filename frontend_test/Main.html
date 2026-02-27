@@ -4,11 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindWay - Dashboard</title>
+    <title>MindWay - 메인 대시보드</title>
+    <script src="./config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -38,10 +41,12 @@
             transition: width 0.3s ease;
             overflow: hidden;
         }
+
         .sidebar.collapsed {
             width: 72px;
             padding: 40px 12px;
         }
+
         .sidebar.collapsed .sidebar-header,
         .sidebar.collapsed .sidebar-header-inner,
         .sidebar.collapsed .menu-label,
@@ -50,21 +55,26 @@
         .sidebar.collapsed .btn-text {
             display: none !important;
         }
+
         .sidebar.collapsed .sidebar-header {
             margin-bottom: 20px;
         }
+
         .sidebar.collapsed .sidebar-header-inner {
             display: none;
         }
+
         .sidebar.collapsed .nav-item {
             justify-content: center;
             padding: 12px;
         }
+
         .sidebar.collapsed .settings-btn,
         .sidebar.collapsed .logout-btn {
             justify-content: center;
             padding: 15px 12px;
         }
+
         .sidebar-toggle {
             position: absolute;
             top: 24px;
@@ -73,7 +83,7 @@
             height: 28px;
             border-radius: 50%;
             background-color: #40444e;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             color: white;
             display: flex;
             align-items: center;
@@ -81,8 +91,9 @@
             cursor: pointer;
             z-index: 100;
             transition: background-color 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
+
         .sidebar-toggle:hover {
             background-color: #4a4e5a;
         }
@@ -140,7 +151,7 @@
 
         .nav-menu {
             list-style: none;
-            flex-grow: 1;
+            flex-grow: 0;
         }
 
         .nav-item {
@@ -156,6 +167,7 @@
             transition: 0.2s;
             gap: 10px;
         }
+
         .nav-item span.nav-text {
             flex: 1;
             text-align: left;
@@ -216,17 +228,18 @@
         .search-bar {
             position: relative;
             width: 100%;
-            max-width: 380px;
+            max-width: 280px;
             min-width: 0;
         }
 
         .search-bar input {
             width: 100%;
-            padding: 14px 45px 14px 20px;
+            padding: 7px 36px 7px 14px;
             border: 1px solid #ddd;
-            border-radius: 12px;
+            border-radius: 8px;
             outline: none;
             transition: border-color 0.2s;
+            font-size: 0.9rem;
         }
 
         .search-bar input:focus {
@@ -235,19 +248,20 @@
 
         .search-bar .search-icon {
             position: absolute;
-            right: 16px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             color: #aaa;
             cursor: pointer;
             transition: color 0.2s;
+            font-size: 0.85rem;
         }
 
         .search-bar .search-icon:hover {
             color: #7389f4;
         }
 
-        .search-bar input:focus ~ .search-icon,
+        .search-bar input:focus~.search-icon,
         .search-bar:focus-within .search-icon {
             color: #7389f4;
         }
@@ -256,36 +270,74 @@
         .top-stats {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 28px;
+            gap: 14px;
+            margin-bottom: 22px;
         }
+
         .top-stats .stat-card {
             background: white;
-            padding: 20px 22px;
-            border-radius: 14px;
+            padding: 10px 14px;
+            border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-            border-left: 4px solid #e0e4f0;
+            border-left: 3px solid #e0e4f0;
         }
+
         .top-stats .stat-card .stat-label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #8b92a0;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             font-weight: 500;
         }
+
+        .stat-label-with-alert {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .kpi-alert-icon {
+            color: #e74c3c;
+            font-size: 0.75rem;
+        }
+
         .top-stats .stat-card .stat-value {
-            font-size: 1.5rem;
+            font-size: 1.15rem;
             font-weight: 700;
             color: #333;
+            line-height: 1.3;
         }
-        .top-stats .stat-card.stat-churn { border-left-color: #e74c3c; }
-        .top-stats .stat-card.stat-satisfy { border-left-color: #7389f4; }
-        .top-stats .stat-card.stat-quality { border-left-color: #E5C76B; }
-        .top-stats .stat-card.stat-unassigned { border-left-color: #6b7080; }
+
+        .top-stats .stat-card .stat-label-sub {
+            font-size: 0.7rem;
+            margin-top: 1px;
+        }
+
+        .top-stats .stat-card.stat-churn {
+            border-left-color: #e74c3c;
+        }
+
+        .top-stats .stat-card.stat-satisfy {
+            border-left-color: #7389f4;
+        }
+
+        .top-stats .stat-card.stat-quality {
+            border-left-color: #E5C76B;
+        }
+
+        .top-stats .stat-card.stat-unassigned {
+            border-left-color: #6b7080;
+        }
+
         @media (max-width: 1200px) {
-            .top-stats { grid-template-columns: repeat(2, 1fr); }
+            .top-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
+
         @media (max-width: 600px) {
-            .top-stats { grid-template-columns: 1fr; }
+            .top-stats {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* KPI 섹션 */
@@ -357,6 +409,19 @@
 
         .appt-header .section-title {
             margin-bottom: 0;
+        }
+
+        .appt-header-filters {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .appt-header-filters .filter-label {
+            font-size: 0.85rem;
+            color: #8b92a0;
+            margin-right: 2px;
         }
 
         .appt-filter-select {
@@ -449,9 +514,11 @@
             background: #fff4e6;
             color: #ff922b;
         }
+
         .appt-table tbody tr.row-requested {
             cursor: pointer;
         }
+
         .appt-table tbody tr.row-requested:hover {
             background: #fffbf5;
         }
@@ -510,9 +577,11 @@
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
+
             .appt-card {
                 grid-column: span 1 !important;
             }
+
             .main-content {
                 padding: 16px 20px;
             }
@@ -522,9 +591,11 @@
             .main-content {
                 padding: 12px 16px;
             }
+
             .search-bar {
                 max-width: 100%;
             }
+
             .section-title {
                 font-size: 1rem;
             }
@@ -538,23 +609,26 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
+
         .quality-alert-overlay.show {
             display: flex;
         }
+
         .quality-alert-modal {
             background: #fff;
             border-radius: 16px;
             padding: 24px 28px;
             max-width: 360px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
             text-align: center;
         }
+
         .quality-alert-modal .alert-icon-wrap {
             width: 56px;
             height: 56px;
@@ -567,17 +641,20 @@
             justify-content: center;
             font-size: 1.75rem;
         }
+
         .quality-alert-modal .alert-title {
             font-size: 1.05rem;
             font-weight: 600;
             color: #333;
             margin-bottom: 8px;
         }
+
         .quality-alert-modal .alert-desc {
             font-size: 0.9rem;
             color: #666;
             margin-bottom: 16px;
         }
+
         .quality-alert-modal .alert-types {
             text-align: left;
             background: #f5f5f5;
@@ -585,6 +662,7 @@
             padding: 14px 18px;
             margin-bottom: 20px;
         }
+
         .quality-alert-modal .alert-types .alert-type-item {
             display: flex;
             align-items: center;
@@ -593,10 +671,12 @@
             font-size: 0.9rem;
             color: #333;
         }
+
         .quality-alert-modal .alert-types .alert-type-item i {
             color: #c62828;
             font-size: 0.95rem;
         }
+
         .quality-alert-modal .btn-confirm-alert {
             padding: 10px 24px;
             border-radius: 10px;
@@ -607,6 +687,7 @@
             font-weight: 600;
             cursor: pointer;
         }
+
         .quality-alert-modal .btn-confirm-alert:hover {
             background: #6378e0;
         }
@@ -619,23 +700,26 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
+
         .churn-alert-overlay.show {
             display: flex;
         }
+
         .churn-alert-modal {
             background: #fff;
             border-radius: 16px;
             padding: 24px 28px;
             max-width: 400px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
             text-align: center;
         }
+
         .churn-alert-modal .churn-alert-icon {
             width: 56px;
             height: 56px;
@@ -648,20 +732,24 @@
             justify-content: center;
             font-size: 1.75rem;
         }
+
         .churn-alert-modal .churn-alert-title {
             font-size: 1.05rem;
             font-weight: 600;
             color: #333;
             margin-bottom: 14px;
         }
+
         .churn-alert-modal .churn-session-id {
             font-size: 0.9rem;
             color: #555;
             margin-bottom: 12px;
         }
+
         .churn-alert-modal .churn-session-id strong {
             color: #333;
         }
+
         .churn-alert-modal .churn-reason-box {
             text-align: left;
             background: #f5f5f5;
@@ -672,6 +760,7 @@
             color: #333;
             line-height: 1.5;
         }
+
         .churn-alert-modal .btn-confirm-churn {
             padding: 10px 24px;
             border-radius: 10px;
@@ -682,6 +771,7 @@
             font-weight: 600;
             cursor: pointer;
         }
+
         .churn-alert-modal .btn-confirm-churn:hover {
             background: #6378e0;
         }
@@ -694,35 +784,40 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
+
         .appt-assign-overlay.show {
             display: flex;
         }
+
         .appt-assign-modal {
             background: #fff;
             border-radius: 16px;
             padding: 24px 28px;
             max-width: 360px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
             text-align: center;
         }
+
         .appt-assign-modal .appt-assign-title {
             font-size: 1.05rem;
             font-weight: 600;
             color: #333;
             margin-bottom: 14px;
         }
+
         .appt-assign-modal .appt-assign-text {
             font-size: 0.95rem;
             color: #555;
             line-height: 1.5;
             margin-bottom: 22px;
         }
+
         .appt-assign-modal .btn-confirm-assign {
             padding: 10px 24px;
             border-radius: 10px;
@@ -733,8 +828,676 @@
             font-weight: 600;
             cursor: pointer;
         }
+
         .appt-assign-modal .btn-confirm-assign:hover {
             background: #6378e0;
+        }
+
+        /* --- 상담 이탈·품질 리포트 섹션 (index 통합) --- */
+        .report-section {
+            margin-bottom: 28px;
+        }
+
+        .report-section .section-title {
+            margin-bottom: 6px;
+        }
+
+        .report-section-desc {
+            font-size: 0.85rem;
+            color: #8b92a0;
+            margin-bottom: 14px;
+        }
+
+        .report-two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .report-two-col-aligned {
+            align-items: stretch;
+        }
+
+        .report-col-block {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .report-col-block .section-title {
+            margin-bottom: 4px;
+        }
+
+        .report-col-block .report-section-desc {
+            margin-bottom: 14px;
+        }
+
+        .report-col-block .card.report-card {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .report-col-block .card.report-card .quality-flow-chart-wrap {
+            flex: 1;
+            min-height: 200px;
+        }
+
+        @media (max-width: 900px) {
+            .report-two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .report-card h4 {
+            font-size: 0.9rem;
+            color: #8b92a0;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .report-bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            height: 140px;
+            padding: 0 0 12px 0;
+        }
+
+        .quality-flow-chart-wrap {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+
+        .quality-flow-chart-wrap canvas {
+            max-height: 200px;
+        }
+
+        .report-bar-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .report-bar {
+            width: 100%;
+            max-width: 48px;
+            min-height: 4px;
+            border-radius: 4px 4px 0 0;
+            background: #7389f4;
+            transition: height 0.3s;
+        }
+
+        .report-bar.delay {
+            background: #58a6ff;
+        }
+
+        .report-bar.short {
+            background: #d29922;
+        }
+
+        .report-bar.neg {
+            background: #f85149;
+        }
+
+        .report-bar.risk {
+            background: #a371f7;
+        }
+
+        .report-bar-wrap .label {
+            font-size: 0.7rem;
+            color: #8b92a0;
+        }
+
+        .report-bar-wrap .value {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        #chart-alert-type .report-bar-wrap {
+            cursor: pointer;
+        }
+
+        #chart-alert-type .report-bar-wrap.selected {
+            opacity: 1;
+        }
+
+        #chart-alert-type .report-bar-wrap:not(.selected) {
+            opacity: 0.85;
+        }
+
+        .alert-list-filter-info {
+            display: none;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #333;
+        }
+
+        .alert-list-filter-info.show {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .alert-list-filter-info .filter-type {
+            font-weight: 600;
+            color: #373f50;
+        }
+
+        .alert-list-filter-info .filter-status {
+            color: #555;
+        }
+
+        .alert-list-filter-info .btn-clear-filter {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #373f50;
+            color: #fff;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .alert-list-filter-info .btn-clear-filter:hover {
+            background: #2c3442;
+        }
+
+        .report-legend {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .report-legend .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .report-legend .dot.delay {
+            background: #58a6ff;
+        }
+
+        .report-legend .dot.short {
+            background: #d29922;
+        }
+
+        .report-legend .dot.neg {
+            background: #f85149;
+        }
+
+        .report-legend .dot.risk {
+            background: #a371f7;
+        }
+
+        /* 미해결 이탈 세션 */
+        .report-card-unresolved {
+            display: flex;
+            flex-direction: column;
+            min-height: 200px;
+        }
+
+        .unresolved-sessions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            overflow-y: auto;
+            max-height: 320px;
+        }
+
+        .unresolved-session-card {
+            background: #fff;
+            border: 1px solid #e8eaed;
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            grid-template-rows: auto auto;
+            gap: 10px 16px;
+            align-items: center;
+            transition: box-shadow 0.2s;
+        }
+
+        .unresolved-session-card:hover {
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .unresolved-session-info {
+            grid-column: 1;
+        }
+
+        .unresolved-session-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #373f50;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .unresolved-session-title .unresolved-alert-icon {
+            color: #e74c3c;
+            font-size: 0.9em;
+            margin-left: 2px;
+        }
+
+        .unresolved-session-meta {
+            font-size: 0.8rem;
+            color: #8b92a0;
+            margin-bottom: 8px;
+        }
+
+        .unresolved-session-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .unresolved-session-types .type-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .unresolved-session-types .type-badge.delay {
+            background: #e8f4ff;
+            color: #1a73e8;
+        }
+
+        .unresolved-session-types .type-badge.short {
+            background: #fef7e0;
+            color: #b45309;
+        }
+
+        .unresolved-session-types .type-badge.neg {
+            background: #fce8e6;
+            color: #c5221f;
+        }
+
+        .unresolved-session-types .type-badge.risk {
+            background: #f3e8fd;
+            color: #7c3aed;
+        }
+
+        .unresolved-session-actions {
+            grid-column: 2;
+            grid-row: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .unresolved-link-report {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #58a6ff;
+            text-decoration: none;
+            padding: 6px 0;
+        }
+
+        .unresolved-link-report:hover {
+            text-decoration: underline;
+        }
+
+        .btn-confirm-status {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 6px;
+            background: #373f50;
+            color: #fff;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s;
+        }
+
+        .btn-confirm-status:hover {
+            background: #2c3442;
+        }
+
+        .btn-confirm-status i {
+            font-size: 0.85em;
+        }
+
+        .btn-confirm-status.checked {
+            background: #8b92a0;
+        }
+
+        .btn-confirm-status.checked:hover {
+            background: #6b7280;
+        }
+
+        .unresolved-empty {
+            text-align: center;
+            padding: 32px 16px;
+            color: #8b92a0;
+            font-size: 0.9rem;
+        }
+
+        .unresolved-empty i {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1.5rem;
+            opacity: 0.6;
+        }
+
+        .report-donut-wrap {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .report-donut {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .report-donut-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .report-table-wrap {
+            overflow-x: auto;
+        }
+
+        .report-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .report-data-table th,
+        .report-data-table td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            color: #444;
+        }
+
+        .report-data-table th {
+            color: #8b92a0;
+            font-weight: 600;
+        }
+
+        .report-data-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .report-data-table.compact th,
+        .report-data-table.compact td {
+            padding: 8px 10px;
+        }
+
+        .report-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .report-badge.detected {
+            background: rgba(210, 153, 34, 0.2);
+            color: #b8860b;
+        }
+
+        .report-badge.resolved {
+            background: rgba(63, 185, 80, 0.2);
+            color: #2e7d32;
+        }
+
+        .btn-report {
+            background-color: #7389f4;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn-report:hover {
+            background-color: #5c73e0;
+        }
+
+        .report-table-card {
+            margin-top: 0;
+        }
+
+        .sess-id-cell {
+            cursor: pointer;
+            color: #7389f4;
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .sess-id-cell:hover {
+            color: #5c73e0;
+        }
+
+        .sess-num {
+            display: inline-block;
+            min-width: 28px;
+            text-align: right;
+        }
+
+        .sess-client-name {
+            color: #555;
+            font-weight: 500;
+            margin-left: 4px;
+        }
+
+        /* 신호강도 0.65 이상: 빨간 표시, 0.65 미만: 초록 표시 */
+        .alert-high-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #f85149;
+            color: #fff;
+            font-size: 0.7rem;
+            margin-left: 6px;
+            flex-shrink: 0;
+        }
+
+        .alert-high-badge i {
+            font-size: 0.65rem;
+        }
+
+        .alert-low-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3fb950;
+            color: #fff;
+            font-size: 0.7rem;
+            margin-left: 6px;
+            flex-shrink: 0;
+        }
+
+        .alert-low-badge i {
+            font-size: 0.65rem;
+        }
+
+        /* 세션 클릭 시 점수·메시지 팝업 */
+        .session-score-popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .session-score-popup-overlay.show {
+            display: flex;
+        }
+
+        .session-score-popup {
+            background: #fff;
+            border-radius: 16px;
+            max-width: 420px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .session-score-popup .popup-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .session-score-popup .popup-header h3 {
+            font-size: 1.1rem;
+            color: #373f50;
+            margin: 0;
+        }
+
+        .session-score-popup .popup-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 8px;
+            background: #f0f0f0;
+            color: #555;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .session-score-popup .popup-close:hover {
+            background: #e0e0e0;
+        }
+
+        .session-score-popup .popup-messages {
+            padding: 16px 20px;
+            background: #f8faff;
+            border-bottom: 1px solid #e8ecf4;
+        }
+
+        .session-score-popup .popup-messages .popup-msg-label {
+            font-size: 0.75rem;
+            color: #8b92a0;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .session-score-popup .popup-msg-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .session-score-popup .popup-msg-item:last-child {
+            border-bottom: none;
+        }
+
+        .session-score-popup .popup-msg-item .msg-emoji {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .session-score-popup .popup-scores {
+            padding: 20px;
+        }
+
+        .session-score-popup .popup-scores .score-row {
+            margin-bottom: 16px;
+        }
+
+        .session-score-popup .popup-scores .score-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .session-score-popup .score-label {
+            font-size: 0.8rem;
+            color: #555;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .session-score-popup .score-bar-wrap {
+            height: 10px;
+            background: #e8ecf4;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .session-score-popup .score-bar {
+            height: 100%;
+            border-radius: 5px;
+            background: #7389f4;
+            transition: width 0.3s;
+        }
+
+        .session-score-popup .score-bar.flow {
+            background: #58a6ff;
+        }
+
+        .session-score-popup .score-bar.quality {
+            background: #3fb950;
+        }
+
+        .session-score-popup .score-bar.emotion {
+            background: #a371f7;
         }
     </style>
 </head>
@@ -749,24 +1512,26 @@
             <div class="sidebar-header-inner">
                 <div class="brand-name">MindWay</div>
                 <div class="user-profile">
-                    <div class="user-name">스노우화이트 상담사</div>
-                    <div class="user-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f0939f859e83959c9f82b09d999e94879189de939f9d">[email&#160;protected]</a></div>
+                    <div class="user-name" id="displayCounselorName">상담사</div>
+                    <div class="user-email" id="displayCounselorEmail">이메일 정보 없음</div>
                 </div>
             </div>
         </div>
-        <div class="menu-label">Main</div>
         <nav class="nav-menu">
             <a href="Main.html" class="nav-item active">
                 <i class="fa-solid fa-house"></i>
-                <span class="nav-text">Dashboard</span>
+                <span class="nav-text">메인 대시보드</span>
                 <i class="fa-solid fa-chevron-up nav-arrow"></i>
             </a>
-            <a href="Session.html" class="nav-item">
-                <i class="fa-regular fa-user"></i>
-                <span class="nav-text">Session Report</span>
+        </nav>
+        <nav class="nav-menu">
+            <a href="Appt.html" class="nav-item">
+                <i class="fa-solid fa-calendar-check"></i>
+                <span class="nav-text">예약 현황</span>
                 <i class="fa-solid fa-chevron-down nav-arrow"></i>
             </a>
         </nav>
+        
         <a href="#" class="settings-btn">
             <i class="fa-solid fa-gear"></i>
             <span class="btn-text">&nbsp; Settings</span>
@@ -779,426 +1544,523 @@
 
     <main class="main-content">
         <header class="header">
-            <h2 style="font-size: 1.5rem;">Dashboard</h2>
+            <h2 style="font-size: 1.5rem;">메인 대시보드</h2>
             <div class="search-bar">
-                <input type="text" id="searchAppt" placeholder="예약ID, 내담자명, 상담사ID로 검색">
-                <i class="fa-solid fa-magnifying-glass search-icon" id="searchIcon" title="검색"></i>
+                <input type="text" id="searchAlert" placeholder="세션, 유형, 상태로 검색">
+                <i class="fa-solid fa-magnifying-glass search-icon" id="searchAlertIcon" title="검색"></i>
             </div>
         </header>
 
-        <div class="top-stats">
+        <div class="top-stats" id="report-kpi">
             <div class="stat-card stat-churn">
-                <div class="stat-label">이탈가능 세션수</div>
-                <div class="stat-value" id="statChurn">-</div>
-            </div>
-            <div class="stat-card stat-satisfy">
-                <div class="stat-label">평균 상담품질 점수</div>
-                <div class="stat-value" id="statSatisfy">-</div>
+                <div class="stat-label stat-label-with-alert">
+                    <i class="fa-solid fa-triangle-exclamation kpi-alert-icon" title="이탈 가능 세션 알림"
+                        aria-hidden="true"></i>
+                    이탈 가능 총 세션수
+                </div>
+                <div class="stat-value" id="kpi-sessions">0</div>
+                <div class="stat-label stat-label-sub">신호강도 0.65 이상</div>
             </div>
             <div class="stat-card stat-quality">
-                <div class="stat-label">전체 예약자수 </div>
-                <div class="stat-value" id="statQuality">-</div>
+                <div class="stat-label">평균 품질 점수</div>
+                <div class="stat-value" id="kpi-quality">0</div>
+                <div class="stat-label stat-label-sub">0~100</div>
             </div>
             <div class="stat-card stat-unassigned">
-                <div class="stat-label">예약 미배정 건수</div>
-                <div class="stat-value" id="statUnassigned">-</div>
+                <div class="stat-label">해결된 이탈 신호</div>
+                <div class="stat-value" id="kpi-resolved">0</div>
+                <div class="stat-label stat-label-sub">RESOLVED</div>
+            </div>
+            <div class="stat-card stat-churn">
+                <div class="stat-label">미해결 이탈 신호</div>
+                <div class="stat-value" id="kpi-alerts">0</div>
+                <div class="stat-label stat-label-sub">DETECTED</div>
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            <div class="card appt-card" style="grid-column: span 2;">
-                <div class="appt-header">
-                    <div class="section-title">상담 예약 LIST</div>
-                    <select class="appt-filter-select" id="apptFilter">
-                        <option value="date">날짜별</option>
-                        <option value="time">시간별</option>
-                    </select>
+        <section class="report-section" id="report-dropout">
+            <div class="report-two-col report-two-col-aligned">
+                <div class="report-col-block">
+                    <h3 class="section-title">미해결 세션관리</h3>
+                    <p class="report-section-desc">상태 확인이 필요한 세션입니다. 확인 후 버튼을 눌러 완료 처리하세요.</p>
+                    <div class="card report-card report-card-unresolved">
+                        <div class="unresolved-sessions-list" id="unresolvedSessionsList"></div>
+                    </div>
                 </div>
-                <div class="table-wrap">
-                    <table class="appt-table">
+                <div class="report-col-block">
+                    <h3 class="section-title">세션 품질 분석</h3>
+                    <p class="report-section-desc">세션별 상담 흐름(flow)·품질(score) 점수 (quality)</p>
+                    <div class="card report-card">
+                        <h4>흐름·품질 추이</h4>
+                        <div class="quality-flow-chart-wrap">
+                            <canvas id="chart-quality-flow-dropout" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card report-table-card">
+                <div class="appt-header" style="margin-bottom: 12px;">
+                    <h4 style="margin: 0; font-size: 0.95rem; color: #8b92a0;">최근 이탈 신호 목록</h4>
+                    <div class="appt-header-filters">
+                        <span class="filter-label">상담단계</span>
+                        <select class="appt-filter-select" id="alertStageFilter" title="상담단계 필터">
+                            <option value="">전체</option>
+                            <option value="초기">초기</option>
+                            <option value="중기">중기</option>
+                            <option value="종결">종결</option>
+                        </select>
+                        <select class="appt-filter-select" id="alertSortBy" title="정렬 기준">
+                            <option value="date">날짜별</option>
+                            <option value="time">시간별</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="alert-list-filter-info" id="alertListFilterInfo">
+                    <span><span class="filter-type" id="alertFilterTypeLabel"></span> <span class="filter-status"
+                            id="alertFilterStatusLabel"></span></span>
+                    <button type="button" class="btn-clear-filter" id="alertClearFilterBtn">전체 보기</button>
+                </div>
+                <div class="report-table-wrap">
+                    <table class="report-data-table">
                         <thead>
                             <tr>
-                                <th style="width: 14%;">예약 ID</th>
-                                <th style="width: 18%;">내담자명</th>
-                                <th style="width: 24%;">예약 시각 (at)</th>
-                                <th style="width: 16%;">상담사 ID</th>
-                                <th style="width: 18%;">예약상태 (status)</th>
+                                <th>세션</th>
+                                <th>내담자</th>
+                                <th>상담단계</th>
+                                <th>유형</th>
+                                <th>상태</th>
+                                <th>신호강도</th>
+                                <th>탐지 시각</th>
+                                <th>리포트</th>
                             </tr>
                         </thead>
-                        <tbody id="apptTableBody">
-                            <!-- appt 데이터로 동적 렌더링 -->
-                        </tbody>
+                        <tbody id="table-alerts"></tbody>
                     </table>
                 </div>
             </div>
+        </section>
 
-            <!-- 예약 REQUESTED 클릭 시 상담사 배정 안내 팝업 -->
-            <div class="appt-assign-overlay" id="apptAssignModal">
-                <div class="appt-assign-modal">
-                    <div class="appt-assign-title">상담사 배정 안내</div>
-                    <div class="appt-assign-text">상담사의 배정이 필요합니다.</div>
-                    <button type="button" class="btn-confirm-assign" id="apptAssignConfirm">확인</button>
+        <div class="session-score-popup-overlay" id="sessionScorePopupOverlay">
+            <div class="session-score-popup" id="sessionScorePopup">
+                <div class="popup-header">
+                    <h3 id="sessionScorePopupTitle">세션 점수</h3>
+                    <button type="button" class="popup-close" id="sessionScorePopupClose"
+                        aria-label="닫기">&times;</button>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="chart-header">
-                    <div class="section-title">세션 품질 추이 (Score)</div>
-                    <select class="period-select" id="periodSelect">
-                        <option value="today">오늘</option>
-                        <option value="week" selected>이번주</option>
-                    </select>
+                <div class="popup-messages">
+                    <div class="popup-msg-label">메시지</div>
+                    <div id="sessionScorePopupMessages"></div>
                 </div>
-                <div class="chart-wrap">
-                    <canvas id="qualityChart" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- 품질 하락 구간 클릭 시 이탈 신호 팝업 -->
-            <div class="quality-alert-overlay" id="qualityAlertOverlay">
-                <div class="quality-alert-modal">
-                    <div class="alert-icon-wrap">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
+                <div class="popup-scores">
+                    <div class="score-row">
+                        <div class="score-label"><span>흐름점수</span><span id="sessionScoreFlowVal">0</span></div>
+                        <div class="score-bar-wrap">
+                            <div class="score-bar flow" id="sessionScoreFlowBar" style="width:0%"></div>
+                        </div>
                     </div>
-                    <div class="alert-title">품질 하락 사유</div>
-                    <div class="alert-desc">해당 구간에서 탐지된 이탈 신호 유형입니다.</div>
-                    <div class="alert-types" id="qualityAlertTypesList">
-                        <!-- 동적 생성 -->
+                    <div class="score-row">
+                        <div class="score-label"><span>품질점수</span><span id="sessionScoreQualityVal">0</span></div>
+                        <div class="score-bar-wrap">
+                            <div class="score-bar quality" id="sessionScoreQualityBar" style="width:0%"></div>
+                        </div>
                     </div>
-                    <button type="button" class="btn-confirm-alert" id="qualityAlertConfirm">확인</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="chart-header">
-                    <div class="section-title">이탈 가능 내담자 분석 (Risk Score)</div>
-                    <select class="period-select" id="scoreFilter">
-                        <option value="0">전체</option>
-                        <option value="0.2">≥0.2</option>
-                        <option value="0.4">≥0.4</option>
-                        <option value="0.6">≥0.6</option>
-                        <option value="0.8">≥0.8</option>
-                    </select>
-                </div>
-                <div class="chart-wrap">
-                    <canvas id="churnChart" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- 이탈 가능 내담자 막대 클릭 시 상세 팝업 -->
-            <div class="churn-alert-overlay" id="churnAlertOverlay">
-                <div class="churn-alert-modal">
-                    <div class="churn-alert-icon">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div class="score-row">
+                        <div class="score-label"><span>정서점수</span><span id="sessionScoreEmotionVal">0</span></div>
+                        <div class="score-bar-wrap">
+                            <div class="score-bar emotion" id="sessionScoreEmotionBar" style="width:0%"></div>
+                        </div>
                     </div>
-                    <div class="churn-alert-title">이탈 신호 상세</div>
-                    <div class="churn-session-id" id="churnAlertSessionId">세션 ID: —</div>
-                    <div class="churn-reason-box" id="churnAlertReasonMsg">이탈 근거 메시지가 표시됩니다.</div>
-                    <button type="button" class="btn-confirm-churn" id="churnAlertConfirm">확인</button>
                 </div>
             </div>
         </div>
+
     </main>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-        // 동일 오리진(FastAPI 서버)에서 제공될 때 API 경로
-        const API_BASE_URL = (window.location.origin && window.location.protocol !== 'file:') ? '' : 'http://127.0.0.1:8000';
+    <script>
         const urlParams = new URLSearchParams(location.search);
-        const counselorId = urlParams.get('counselor_id') || localStorage.getItem('counselor_id') || '';
+        let counselorId = urlParams.get('counselor_id') || localStorage.getItem('counselor_id') || '';
 
-        // ★ localStorage 저장: Session.html, Chat 등 다른 페이지에서도 counselor_id 유지
-        if (counselorId) localStorage.setItem('counselor_id', counselorId);
+        // 전역 상태 (실제 API 데이터 저장소)
+        let STATE = {
+            sessions: [],
+            alerts: [],
+            quality: []
+        };
 
-        // ★ Session.html 링크에 counselor_id 파라미터 추가
-        const sessionNavLink = document.querySelector('a[href="Session.html"]');
-        if (sessionNavLink && counselorId) {
-            sessionNavLink.href = `Session.html?counselor_id=${encodeURIComponent(counselorId)}`;
+        window._alertTypeFilter = null;
+        window._unresolvedConfirmedSessIds = window._unresolvedConfirmedSessIds || new Set();
+
+        function formatTime(isoStr) {
+            if (!isoStr) return '-';
+            const d = new Date(isoStr);
+            return d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' }) + ' ' +
+                d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // 상담 예약 LIST: DB appt 테이블 연동 (GET /appointments?counselor_id=...)
-        let apptData = [];
+        function escHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
 
-        async function loadAppointments() {
+        // 1. 대시보드 실시간 데이터 병렬 호출
+        async function fetchDashboardData() {
             try {
-                const url = counselorId
-                    ? `${API_BASE_URL}/appointments?counselor_id=${encodeURIComponent(counselorId)}&limit=200`
-                    : `${API_BASE_URL}/appointments?limit=200`;
-                const res = await fetch(url);
-                if (!res.ok) {
-                    console.error('예약 목록 API 오류:', res.status);
-                    apptData = [];
-                } else {
-                    const data = await res.json();
-                    apptData = Array.isArray(data.items) ? data.items : [];
-                }
-            } catch (err) {
-                console.error('예약 목록 로드 실패:', err);
-                apptData = [];
+                const cidQuery = counselorId ? `counselor_id=${counselorId}&` : '';
+
+                // 세션 목록과 이탈 신호 목록 동시 호출
+                const [sessRes, alertRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/sessions?${cidQuery}limit=100`),
+                    fetch(`${API_BASE_URL}/stats/recent-alerts?${cidQuery}`)
+                ]);
+
+                const sessData = await sessRes.json();
+                const alertData = await alertRes.json();
+
+                STATE.sessions = sessData.items || [];
+                STATE.alerts = alertData.items || [];
+
+                // 차트에 띄울 최근 15개 세션의 품질 데이터 호출
+                const recentSessions = STATE.sessions.slice(0, 15);
+                const qualityPromises = recentSessions.map(s =>
+                    fetch(`${API_BASE_URL}/sessions/${s.id}/dashboard`)
+                        .then(r => r.json())
+                        .catch(() => null)
+                );
+
+                const dashboards = await Promise.all(qualityPromises);
+                STATE.quality = dashboards.filter(Boolean).map(d => ({
+                    sess_id: d.session.id,
+                    flow: d.quality?.flow || 0,
+                    score: d.quality?.score || 0,
+                    emotion: d.risk_score || 0
+                }));
+
+                renderReportSections();
+            } catch (e) {
+                console.error("대시보드 데이터 로드 오류:", e);
             }
-            const unassignedEl = document.getElementById('statUnassigned');
-            if (unassignedEl) unassignedEl.textContent = apptData.filter(a => a.status === 'REQUESTED').length;
-            const qualityEl = document.getElementById('statQuality');
-            if (qualityEl) qualityEl.textContent = apptData.length;
-            if (typeof filterApptList === 'function') filterApptList();
         }
 
-        function formatAt(iso) {
-            if (iso == null || iso === '') return '-';
-            const d = new Date(iso);
-            if (isNaN(d.getTime())) return '-';
-            return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) +
-                ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-        }
+        // 2. 이탈 신호 필터링 로직
+        function getFilteredAlerts() {
+            const searchEl = document.getElementById('searchAlert');
+            const q = (searchEl && searchEl.value.trim()) || '';
+            const stageFilter = (document.getElementById('alertStageFilter') && document.getElementById('alertStageFilter').value) || '';
 
-        function renderApptTable(data) {
-            const tbody = document.getElementById('apptTableBody');
-            const list = Array.isArray(data) ? data : [];
-            tbody.innerHTML = list.map(a => {
-                const statusClass = 'status-' + (a.status || '').toLowerCase();
-                const clientName = (a.client_name != null && a.client_name !== '') ? a.client_name : '-';
-                const counselorDisplay = a.counselor_id != null ? `C-${a.counselor_id}` : '미배정';
-                return `<tr data-id="${a.id}" data-status="${a.status || ''}" class="${a.status === 'REQUESTED' ? 'row-requested' : ''}">
-                    <td><span class="session-id">A-${a.id}</span></td>
-                    <td><strong>${clientName}</strong></td>
-                    <td>${formatAt(a.at)}</td>
-                    <td>${counselorDisplay}</td>
-                    <td><span class="status-badge ${statusClass}">${a.status || '-'}</span></td>
-                </tr>`;
-            }).join('');
-        }
+            let list = STATE.alerts;
 
-        document.getElementById('apptTableBody').addEventListener('click', function (e) {
-            const row = e.target.closest('tr[data-status]');
-            if (row && row.getAttribute('data-status') === 'REQUESTED') {
-                document.getElementById('apptAssignModal').classList.add('show');
+            if (window._alertTypeFilter) {
+                list = list.filter(a => (a.type || '') === window._alertTypeFilter);
             }
-        });
-
-        document.getElementById('apptAssignConfirm').addEventListener('click', function () {
-            document.getElementById('apptAssignModal').classList.remove('show');
-        });
-        document.getElementById('apptAssignModal').addEventListener('click', function (e) {
-            if (e.target === this) this.classList.remove('show');
-        });
-
-        function getSortedApptList(data) {
-            const sortBy = document.getElementById('apptFilter').value;
-            const arr = [...data];
-            if (sortBy === 'date') {
-                arr.sort((a, b) => new Date(a.at) - new Date(b.at));
-            } else {
-                arr.sort((a, b) => {
-                    const tA = new Date(a.at).getTime() % (24 * 60 * 60 * 1000);
-                    const tB = new Date(b.at).getTime() % (24 * 60 * 60 * 1000);
-                    return tA - tB;
+            if (stageFilter) {
+                list = list.filter(a => {
+                    const session = STATE.sessions.find(s => s.id === a.sess_id);
+                    const st = session?.stage || '초기';
+                    return st === stageFilter;
                 });
             }
-            return arr;
+            if (!q) return list;
+
+            const upper = q.toUpperCase();
+            return list.filter(a => {
+                return String(a.sess_id).includes(q) ||
+                    (a.type || '').toUpperCase().includes(upper) ||
+                    (a.status || '').toUpperCase().includes(upper);
+            });
         }
 
-        function filterApptList() {
-            const input = document.getElementById('searchAppt');
-            const q = input.value.trim();
-            const idPart = q.replace(/^a-?/i, '');
-            const counselPart = q.replace(/^c-?/i, '');
-            const filtered = q ? apptData.filter(a =>
-                String(a.id).includes(idPart) ||
-                (a.client_name || '').includes(q) ||
-                (counselorId && String(counselorId).includes(counselPart)) ||
-                (a.counselor_id != null && String(a.counselor_id).includes(counselPart))
-            ) : apptData;
-            const sorted = getSortedApptList(filtered);
-            renderApptTable(sorted);
+        function getSortedAlertList(alerts, sortBy) {
+            const list = Array.isArray(alerts) ? [...alerts] : [];
+            if (list.length === 0) return list;
+            const sortMode = sortBy === 'time' ? 'time' : 'date';
+            list.sort(function (a, b) {
+                const tA = a.at ? new Date(a.at.replace(' ', 'T')).getTime() : 0;
+                const tB = b.at ? new Date(b.at.replace(' ', 'T')).getTime() : 0;
+                if (sortMode === 'date') return tB - tA;
+                return (tA % (24 * 60 * 60 * 1000)) - (tB % (24 * 60 * 60 * 1000));
+            });
+            return list;
         }
 
-        document.getElementById('searchAppt').addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                filterApptList();
-            }
-        });
-        document.getElementById('searchAppt').addEventListener('input', function () {
-            if (this.value.trim() === '') filterApptList();
-        });
-        document.getElementById('searchIcon').addEventListener('click', function () {
-            filterApptList();
-            document.getElementById('searchAppt').focus();
-        });
-        document.getElementById('apptFilter').addEventListener('change', filterApptList);
-
-        // 사이드바 토글
-        document.getElementById('sidebarToggle').addEventListener('click', function () {
-            const sidebar = document.getElementById('sidebar');
-            const icon = this.querySelector('i');
-            sidebar.classList.toggle('collapsed');
-            if (sidebar.classList.contains('collapsed')) {
-                icon.className = 'fa-solid fa-chevron-right';
-                this.setAttribute('title', '메뉴 펼치기');
-                this.setAttribute('aria-label', '메뉴 펼치기');
-            } else {
-                icon.className = 'fa-solid fa-chevron-left';
-                this.setAttribute('title', '메뉴 접기');
-                this.setAttribute('aria-label', '메뉴 접기');
-            }
-        });
-
-        loadAppointments();
-
-        const ctxQuality = document.getElementById('qualityChart').getContext('2d');
-        let qualityChart = new Chart(ctxQuality, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [
-                    {
-                        label: '흐름 점수 (flow)',
-                        data: [],
-                        borderColor: '#7389f4',
-                        backgroundColor: 'rgba(115, 137, 244, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        spanGaps: true
-                    },
-                    {
-                        label: '품질 점수 (score)',
-                        data: [],
-                        borderColor: '#E5C76B',
-                        backgroundColor: 'rgba(229, 199, 107, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        spanGaps: true
-                    }
-                ]
-            },
-            options: {
-                scales: { y: { beginAtZero: true, max: 100 } },
-                plugins: { legend: { display: true } },
-                interaction: { intersect: false, mode: 'index' },
-                onClick: function (evt, elements, chart) {
-                    if (elements.length === 0) return;
-                    var idx = elements[0].index;
-                    var drop = currentQualityDropAlerts.find(function (d) { return d.index === idx; });
-                    if (!drop || !drop.types || drop.types.length === 0) return;
-                    var typeLabels = {
-                        DELAY: '응답 지연',
-                        SHORT: '짧은 발화',
-                        NEG_SPIKE: '부정 정서 급증',
-                        RISK_WORD: '이탈 키워드'
+        // 3. 미해결 이탈 세션 추출
+        function getUnresolvedDropoutSessions() {
+            const alerts = STATE.alerts.filter(a => a.status === 'DETECTED');
+            const bySess = {};
+            alerts.forEach(a => {
+                const sid = a.sess_id;
+                if (!bySess[sid]) {
+                    bySess[sid] = {
+                        session: STATE.sessions.find(s => s.id === sid) || { id: sid, client_name: a.client_name || '알 수 없음' },
+                        alerts: []
                     };
-                    var listEl = document.getElementById('qualityAlertTypesList');
-                    listEl.innerHTML = drop.types.map(function (t) {
-                        var label = typeLabels[t] || t;
-                        return '<div class="alert-type-item"><i class="fa-solid fa-circle-exclamation"></i><span>' + label + '</span></div>';
-                    }).join('');
-                    document.getElementById('qualityAlertOverlay').classList.add('show');
                 }
+                bySess[sid].alerts.push(a);
+            });
+            return Object.values(bySess);
+        }
+
+        function renderUnresolvedSessions() {
+            const listEl = document.getElementById('unresolvedSessionsList');
+            if (!listEl) return;
+            const items = getUnresolvedDropoutSessions();
+            const typeClass = { DELAY: 'delay', SHORT: 'short', NEG_SPIKE: 'neg', RISK_WORD: 'risk' };
+
+            if (items.length === 0) {
+                listEl.innerHTML = '<div class="unresolved-empty"><i class="fa-solid fa-circle-check"></i>미해결 이탈 세션이 없습니다.</div>';
+                return;
             }
-        });
 
-        var currentQualityDropAlerts = [];
+            listEl.innerHTML = items.map(function (item) {
+                const s = item.session;
+                const sessId = s.id;
+                const types = [...new Set((item.alerts || []).map(a => a.type).filter(Boolean))];
+                const badges = types.map(function (t) {
+                    const cls = typeClass[t] || 'delay';
+                    return `<span class="type-badge ${cls}">${t}</span>`;
+                }).join('');
 
-        async function updateQualityChart() {
-            try {
-                const res = await fetch(API_BASE_URL + '/stats/quality-trend?counselor_id=' + counselorId);
-                const data = await res.json();
-                const items = data.items || [];
-                qualityChart.data.labels = items.map(i => i.date_label);
-                qualityChart.data.datasets[0].data = items.map(i => i.avg_flow);
-                qualityChart.data.datasets[1].data = items.map(i => i.avg_quality_score);
-                qualityChart.data.datasets[2].data = items.map(i => i.avg_sat_rate);
-                qualityChart.update();
-                // ★ 평균 품질점수 카드 업데이트
-                const scores = items.map(i => i.avg_quality_score).filter(v => v > 0);
-                const satisfyEl = document.getElementById('statSatisfy');
-                if (satisfyEl) satisfyEl.textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) + '%' : '-';
-            } catch (e) { console.error('Quality Chart Load Error:', e); }
-        }
+                const isConfirmed = window._unresolvedConfirmedSessIds.has(sessId);
+                const btnHtml = isConfirmed
+                    ? `<button type="button" class="btn-confirm-status checked" data-sess-id="${sessId}" title="다시 누르면 상태확인으로 되돌림"><i class="fa-solid fa-check"></i> 체크됨</button>`
+                    : `<button type="button" class="btn-confirm-status" data-sess-id="${sessId}" title="상태 확인 완료 처리"><i class="fa-solid fa-check-double"></i> 상태확인완료</button>`;
 
-        updateQualityChart();
-        document.getElementById('periodSelect').addEventListener('change', updateQualityChart);
+                const timeStr = s.start_at ? formatTime(s.start_at) : '';
 
-        document.getElementById('qualityAlertConfirm').addEventListener('click', function () {
-            document.getElementById('qualityAlertOverlay').classList.remove('show');
-        });
-        document.getElementById('qualityAlertOverlay').addEventListener('click', function (e) {
-            if (e.target === this) this.classList.remove('show');
-        });
+                // ★ 삭제된 파일 대응: 바로 SessionDetail.html 로 연결
+                return `
+                <div class="unresolved-session-card" data-sess-id="${sessId}">
+                    <div class="unresolved-session-info">
+                        <div class="unresolved-session-title">세션 ${sessId} · ${s.client_name || '-'} <i class="fa-solid fa-triangle-exclamation unresolved-alert-icon" title="이탈 신호"></i></div>
+                        <div class="unresolved-session-meta">${s.stage || '초기'} · ${timeStr}</div>
+                        <div class="unresolved-session-types">${badges}</div>
+                    </div>
+                    <div class="unresolved-session-actions">
+                        <a href="SessionDetail.html?sess_id=${sessId}" target="_blank" class="unresolved-link-report" title="세션 상세·리포트">리포트 보기</a>
+                        ${btnHtml}
+                    </div>
+                </div>`;
+            }).join('');
 
-        // alert 테이블 기반 mock 데이터 (이탈 신호/조치, 이탈근거 메시지 포함)
-
-        var currentChurnAlertList = [];
-
-        
-
-        async function updateAlertChart() {
-            try {
-                const minScore = parseFloat(document.getElementById('scoreFilter').value) || 0;
-                const res = await fetch(API_BASE_URL + '/stats/recent-alerts?counselor_id=' + counselorId);
-                const data = await res.json();
-                const filtered = (data.items || []).filter(a => a.score >= minScore);
-                currentChurnAlertList = filtered;
-                const labels = filtered.map(a => `${a.client_name} (${a.type})`);
-                const scores = filtered.map(a => a.score);
-                alertChart.data.labels = labels;
-                alertChart.data.datasets[0].data = scores;
-                alertChart.data.datasets[0].backgroundColor = scores.map((_, i) => i === 0 ? 'rgba(231, 76, 60, 0.7)' : 'rgba(99, 132, 255, 0.7)');
-                alertChart.data.datasets[0].borderColor = scores.map((_, i) => i === 0 ? 'rgba(231, 76, 60, 1)' : 'rgba(99, 132, 255, 1)');
-                alertChart.update();
-                // ★ 이탈가능 세션수 카드: Risk Score 차트와 동일 데이터
-                const churnEl = document.getElementById('statChurn');
-                if (churnEl) churnEl.textContent = filtered.length;
-            } catch (e) { console.error('Alert Chart Load Error:', e); }
-        }
-        const ctxChurn = document.getElementById('churnChart').getContext('2d');
-        let alertChart = new Chart(ctxChurn, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: '신호 강도 (score)',
-                    data: [],
-                    backgroundColor: [], 
-                    borderColor: [],     
-                    borderRadius: 6,
-                    barThickness: 24
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        max: 1.0,
-                        title: { display: true, text: '신호 강도 (0~1)' }
-                    },
-                    y: {
-                        ticks: {
-                            crossAlign: 'far',
-                            padding: 10,
-                            font: { size: 12 }
-                        }
+            listEl.querySelectorAll('.btn-confirm-status').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const sid = parseInt(this.getAttribute('data-sess-id'), 10);
+                    if (!sid) return;
+                    if (this.classList.contains('checked')) {
+                        window._unresolvedConfirmedSessIds.delete(sid);
+                    } else {
+                        window._unresolvedConfirmedSessIds.add(sid);
                     }
+                    renderUnresolvedSessions();
+                });
+            });
+        }
+
+        // 4. 이탈 신호 테이블 렌더링
+        function openSessionReport(sessionId) {
+            window.open(`SessionDetail.html?sess_id=${sessionId}`, '_blank');
+        }
+
+        function renderAlertTable(alerts) {
+            const tbody = document.getElementById('table-alerts');
+            if (!tbody) return;
+            const ALERT_THRESHOLD = 0.65;
+
+            tbody.innerHTML = alerts.map(a => {
+                const sessId = a.sess_id || 0;
+                const session = STATE.sessions.find(s => s.id === sessId);
+                const clientName = a.client_name || (session ? session.client_name : '-');
+                const scoreNum = parseFloat(a.score);
+
+                let alertBadge = '';
+                if (!isNaN(scoreNum) && scoreNum >= ALERT_THRESHOLD) {
+                    alertBadge = '<span class="alert-high-badge" title="신호강도 0.65 이상"><i class="fa-solid fa-exclamation"></i></span>';
+                } else if (!isNaN(scoreNum) && scoreNum < ALERT_THRESHOLD) {
+                    alertBadge = '<span class="alert-low-badge" title="신호강도 0.65 미만"><i class="fa-solid fa-check"></i></span>';
+                }
+
+                const reportBtn = `<button type="button" class="btn-report" onclick="event.stopPropagation(); openSessionReport(${sessId})">리포트</button>`;
+                const stageLabel = session?.stage || '초기';
+                const sessCell = `<td class="sess-id-cell" onclick="showSessionDetail(${sessId})" role="button" title="클릭하면 점수·메시지 보기"><span class="sess-num">${sessId}</span>${alertBadge}</td>`;
+
+                return `<tr>${sessCell}<td>${escHtml(clientName)}</td><td>${stageLabel}</td><td>${a.type}</td><td><span class="report-badge ${(a.status || '').toLowerCase()}">${a.status}</span></td><td>${a.score != null ? a.score : '-'}</td><td>${formatTime(a.at)}</td><td>${reportBtn}</td></tr>`;
+            }).join('') || '<tr><td colspan="8">조건에 맞는 이탈 신호가 없습니다.</td></tr>';
+        }
+
+        function filterAlertList() {
+            const filtered = getFilteredAlerts();
+            const sortBy = (document.getElementById('alertSortBy') && document.getElementById('alertSortBy').value) || 'date';
+            const sorted = getSortedAlertList(filtered, sortBy);
+            renderAlertTable(sorted);
+            updateAlertFilterInfo(filtered);
+        }
+
+        function updateAlertFilterInfo(filteredList) {
+            const panel = document.getElementById('alertListFilterInfo');
+            if (!panel) return;
+            if (!window._alertTypeFilter) {
+                panel.classList.remove('show');
+                return;
+            }
+            const detected = filteredList.filter(a => a.status === 'DETECTED').length;
+            const resolved = filteredList.filter(a => a.status === 'RESOLVED').length;
+            document.getElementById('alertFilterTypeLabel').textContent = '신호 유형: ' + window._alertTypeFilter;
+            document.getElementById('alertFilterStatusLabel').textContent = '| 조치상태: DETECTED ' + detected + '건, RESOLVED ' + resolved + '건';
+            panel.classList.add('show');
+        }
+
+        // 5. 전체 UI 및 차트 렌더링
+        function renderReportSections() {
+            const el = (id) => document.getElementById(id);
+            if (!el('kpi-sessions')) return;
+
+            // KPI 업데이트
+            const highAlerts = STATE.alerts.filter(a => a.score != null && Number(a.score) >= 0.65);
+            const highAlertSessIds = new Set(highAlerts.map(a => a.sess_id));
+
+            el('kpi-sessions').textContent = highAlertSessIds.size;
+            el('kpi-alerts').textContent = STATE.alerts.filter(a => a.status === 'DETECTED').length;
+
+            const avgScore = STATE.quality.length
+                ? (STATE.quality.reduce((s, q) => s + q.score, 0) / STATE.quality.length).toFixed(1)
+                : '0';
+            el('kpi-quality').textContent = avgScore;
+            el('kpi-resolved').textContent = STATE.alerts.filter(a => a.status === 'RESOLVED').length;
+
+            renderUnresolvedSessions();
+            filterAlertList();
+
+            // 차트 업데이트
+            var sortedQuality = STATE.quality.slice().sort((a, b) => a.sess_id - b.sess_id);
+            var flowChartConfig = {
+                type: 'line',
+                data: {
+                    labels: sortedQuality.map(q => '세션 ' + q.sess_id),
+                    datasets: [
+                        { label: '흐름(flow)', data: sortedQuality.map(q => q.flow), borderColor: '#58a6ff', backgroundColor: 'rgba(88, 166, 255, 0.1)', fill: true, tension: 0.3 },
+                        { label: '품질(score)', data: sortedQuality.map(q => q.score), borderColor: '#3fb950', backgroundColor: 'rgba(63, 185, 80, 0.1)', fill: true, tension: 0.3 }
+                    ]
                 },
-                plugins: { legend: { display: false } },
-                onClick: function (evt, elements, chart) {
-                    if (elements.length === 0) return;
-                    var idx = elements[0].index;
-                    var alert = currentChurnAlertList[idx];
-                    if (!alert) return;
-                    document.getElementById('churnAlertSessionId').innerHTML = '세션 ID: <strong>SESS-' + alert.sess_id + '</strong>';
-                    document.getElementById('churnAlertReasonMsg').textContent = alert.reasonMsg || '이탈 근거 메시지 없음';
-                    document.getElementById('churnAlertOverlay').classList.add('show');
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100, title: { display: false } } }, plugins: { legend: { position: 'top' } } }
+            };
+
+            if (typeof Chart !== 'undefined') {
+                var flowCanvasDropout = document.getElementById('chart-quality-flow-dropout');
+                if (flowCanvasDropout) {
+                    if (window._qualityFlowChartDropout) window._qualityFlowChartDropout.destroy();
+                    window._qualityFlowChartDropout = new Chart(flowCanvasDropout.getContext('2d'), flowChartConfig);
                 }
             }
-        });
-        document.getElementById('scoreFilter').addEventListener('change', updateAlertChart);
+        }
 
-        document.getElementById('churnAlertConfirm').addEventListener('click', function () {
-            document.getElementById('churnAlertOverlay').classList.remove('show');
-        });
-        document.getElementById('churnAlertOverlay').addEventListener('click', function (e) {
-            if (e.target === this) this.classList.remove('show');
+        // 6. 실시간 팝업 로드 로직 (대화 내용 및 점수 조회)
+        async function openSessionScorePopup(sessId) {
+            const overlay = document.getElementById('sessionScorePopupOverlay');
+            if (overlay && overlay.classList.contains('show') && String(overlay.dataset.currentSessId) === String(sessId)) {
+                closeSessionScorePopup();
+                return;
+            }
+
+            document.getElementById('sessionScorePopupTitle').textContent = '세션 ' + sessId;
+            const msgEl = document.getElementById('sessionScorePopupMessages');
+            msgEl.innerHTML = '<div class="popup-msg-item"><span>실시간 데이터를 불러오는 중...</span></div>';
+
+            if (overlay) overlay.dataset.currentSessId = sessId;
+            overlay.classList.add('show');
+
+            try {
+                const [dashRes, msgRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/sessions/${sessId}/dashboard`),
+                    fetch(`${API_BASE_URL}/sessions/${sessId}/messages?limit=5`)
+                ]);
+                const d = await dashRes.json();
+                const msgs = await msgRes.json();
+
+                const flow = d.quality?.flow || 0;
+                const quality = d.quality?.score || 0;
+                const emotionRaw = d.risk_score || 0;
+                const emotionPct = Math.round(emotionRaw * 100);
+
+                const items = msgs.items || [];
+                if (items.length) {
+                    msgEl.innerHTML = items.map(m => `
+                        <div class="popup-msg-item">
+                            <span class="msg-emoji">${m.speaker === 'CLIENT' ? '👤' : '🎧'}</span>
+                            <span>${escHtml(m.text || '')}</span>
+                        </div>`).join('');
+                } else {
+                    msgEl.innerHTML = '<div class="popup-msg-item"><span class="msg-emoji">—</span><span>메시지 없음</span></div>';
+                }
+
+                document.getElementById('sessionScoreFlowVal').textContent = flow.toFixed(1);
+                document.getElementById('sessionScoreQualityVal').textContent = quality.toFixed(1);
+                document.getElementById('sessionScoreEmotionVal').textContent = emotionRaw.toFixed(2);
+
+                document.getElementById('sessionScoreFlowBar').style.width = Math.min(100, Math.max(0, flow)) + '%';
+                document.getElementById('sessionScoreQualityBar').style.width = Math.min(100, Math.max(0, quality)) + '%';
+                document.getElementById('sessionScoreEmotionBar').style.width = Math.min(100, Math.max(0, emotionPct)) + '%';
+
+            } catch (e) {
+                msgEl.innerHTML = '<div class="popup-msg-item"><span style="color:red;">서버 연결 오류</span></div>';
+            }
+        }
+
+        function closeSessionScorePopup() {
+            document.getElementById('sessionScorePopupOverlay').classList.remove('show');
+        }
+
+        function showSessionDetail(sessId) {
+            openSessionScorePopup(sessId);
+        }
+
+        // 초기화 및 이벤트 리스너
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('sidebarToggle');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function () {
+                    const sidebar = document.getElementById('sidebar');
+                    const icon = this.querySelector('i');
+                    sidebar.classList.toggle('collapsed');
+                    if (sidebar.classList.contains('collapsed')) {
+                        icon.className = 'fa-solid fa-chevron-right';
+                        this.setAttribute('title', '메뉴 펼치기');
+                    } else {
+                        icon.className = 'fa-solid fa-chevron-left';
+                        this.setAttribute('title', '메뉴 접기');
+                    }
+                });
+            }
+
+            // 필터 및 검색 이벤트
+            const searchAlertEl = document.getElementById('searchAlert');
+            if (searchAlertEl) {
+                searchAlertEl.addEventListener('keydown', e => { if (e.key === 'Enter') filterAlertList(); });
+                searchAlertEl.addEventListener('input', filterAlertList);
+            }
+            document.getElementById('searchAlertIcon')?.addEventListener('click', () => searchAlertEl?.focus());
+            document.getElementById('alertStageFilter')?.addEventListener('change', filterAlertList);
+            document.getElementById('alertSortBy')?.addEventListener('change', filterAlertList);
+            document.getElementById('alertClearFilterBtn')?.addEventListener('click', () => {
+                window._alertTypeFilter = null;
+                document.getElementById('alertListFilterInfo')?.classList.remove('show');
+                filterAlertList();
+            });
+
+            // 팝업 이벤트
+            document.getElementById('sessionScorePopupClose')?.addEventListener('click', closeSessionScorePopup);
+            document.getElementById('sessionScorePopupOverlay')?.addEventListener('click', e => {
+                if (e.target === e.currentTarget) closeSessionScorePopup();
+            });
+
+            // ★ 수정 2: JS의 대체값(Fallback) 가짜 데이터 제거
+            const counselorNameEl = document.getElementById('displayCounselorName') || document.querySelector('.user-name');
+            const counselorEmailEl = document.getElementById('displayCounselorEmail') || document.querySelector('.user-email');
+            
+            if (counselorNameEl) counselorNameEl.textContent = localStorage.getItem('counselor_name') || '상담사';
+            if (counselorEmailEl) counselorEmailEl.textContent = localStorage.getItem('counselor_email') || '이메일 정보 없음';
+
+            // 데이터 초기 로딩
+            fetchDashboardData();
         });
     </script>
 </body>
+
 </html>

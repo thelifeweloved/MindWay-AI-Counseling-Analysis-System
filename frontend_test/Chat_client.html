@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindWay - 실시간 상담 (내담자)</title>
+    <script src="./config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
+        
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
         body { display: flex; background: #f0f2f5; height: 100vh; overflow: hidden; }
 
@@ -65,12 +67,11 @@
         .chat-msg { display: flex; max-width: 52%; animation: msgIn 0.3s ease; }
         @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 확실한 좌/우 정렬 분리 */
         .chat-msg.msg-me { align-self: flex-end; }
         .chat-msg.msg-other { align-self: flex-start; }
         
         .chat-msg .bubble { padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.48; word-break: break-word; background: #fff; color: #1a1a1a; border: 1px solid #e8eaef; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .chat-msg.msg-me .bubble { border-left: 4px solid #E5C76B; } /* 내담자(본인) 말풍선 포인트 */
+        .chat-msg.msg-me .bubble { border-left: 4px solid #E5C76B; } 
         .chat-msg .who { font-size: 0.7rem; font-weight: 600; margin-bottom: 3px; opacity: 0.85; }
         .chat-msg.msg-me .who { color: #333; }
         .chat-msg.msg-other .who { color: #7389f4; }
@@ -78,7 +79,7 @@
         .chat-msg.msg-me .time { color: #555; }
         .chat-msg.msg-other .time { color: #888; }
         
-        /* 하단 입력부 및 모달 */
+        /* 하단 입력부 */
         .chat-input-area { flex-shrink: 0; padding: 20px 28px 28px; background: #fff; border-top: 1px solid #e8eaef; }
         .chat-input-row { display: flex; gap: 12px; align-items: flex-end; }
         .chat-input-row textarea { flex: 1; min-height: 52px; max-height: 140px; padding: 14px 18px; background: #f0f2f5; border: 1px solid #dce0e6; border-radius: 14px; font-size: 0.95rem; resize: none; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
@@ -89,6 +90,7 @@
         .chat-input-row .btn-icon:hover { background: #f5f5f5; color: #555; }
         .chat-input-row .btn-icon.on { background: #E5C76B; color: #1a1a1a; border-color: #E5C76B; }
 
+        /* 모달 및 기타 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
         .modal-overlay.show { display: flex; }
         .modal-box { background: #fff; border-radius: 16px; padding: 28px; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center; }
@@ -110,7 +112,6 @@
         .modal-one-line-input { width: 100%; padding: 12px 14px; border: 1px solid #dce0e6; border-radius: 10px; font-size: 0.95rem; outline: none; box-sizing: border-box; }
         .modal-one-line-input:focus { border-color: #E5C76B; }
 
-        /* 영상 소스 선택 UI (내담자의 딥페이스 송출용) */
         .source-select-box { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
         .source-btn { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border: 2px solid #e8eaef; border-radius: 12px; background: #fafbfc; cursor: pointer; transition: all 0.2s; text-align: left; width: 100%; }
         .source-btn:hover { border-color: #7389f4; background: #f0f2ff; }
@@ -119,9 +120,7 @@
         .source-btn.file-btn .src-icon { background: #e6f9f0; color: #1a7f5a; }
         .source-btn .src-title { font-size: 0.95rem; font-weight: 700; color: #222; margin-bottom: 2px; }
         .source-btn .src-sub { font-size: 0.78rem; color: #999; }
-        #videoFileInput { display: none; }
 
-        /* 우측 패널 (결과값 UI는 삭제하고 라이브 캠만 남김) */
         .chat-right-panel { width: 340px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8eaef; display: flex; flex-direction: column; overflow: hidden; box-shadow: -4px 0 24px rgba(0,0,0,0.04); }
         .panel-section { padding: 20px; border-bottom: 1px solid #f0f1f5; }
         .panel-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; color: #8b92a0; margin-bottom: 12px; }
@@ -133,7 +132,6 @@
         .live-feed-wrap .placeholder { color: #6b7080; font-size: 0.9rem; font-weight: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
         .live-feed-wrap .placeholder .icon-wrap { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; }
         .live-feed-wrap .placeholder .icon-wrap i { font-size: 1.75rem; color: #4a4e58; }
-        .live-feed-wrap .placeholder .hint { font-size: 0.8rem; color: #3d4048; margin-top: -4px; text-align: center; }
         .live-feed-wrap video { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
         .live-feed-wrap .badge-live { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 6px 12px; border-radius: 6px; letter-spacing: 0.08em; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.1); }
         .live-feed-wrap .badge-live .dot { width: 6px; height: 6px; border-radius: 50%; background: #f44336; animation: livePulse 1.5s ease-in-out infinite; }
@@ -141,6 +139,9 @@
 
         @media (max-width: 1024px) { .chat-right-panel { width: 280px; } }
         @media (max-width: 768px) { .chat-right-panel { display: none; } .chat-main { border-radius: 0; } }
+
+        /* [신규 기능 전용 스타일 - 추가됨] */
+        .chat-msg .bubble img { max-width: 100%; max-height: 300px; border-radius: 8px; margin-top: 8px; display: block; cursor: pointer; }
     </style>
 </head>
 
@@ -153,8 +154,8 @@
             <div class="sidebar-header-inner">
                 <div class="brand-name">MindWay</div>
                 <div class="user-profile">
-                    <div class="user-name" id="displayClientName">내담자</div>
-                    <div class="user-email">마음을 여는 공간</div>
+                    <div class="user-name" id="displayClientName"></div>
+                    <div class="user-email" id="displayClientEmail"></div>
                 </div>
             </div>
         </div>
@@ -165,12 +166,7 @@
                 <span class="nav-item-text">내담자 상담</span>
                 <i class="fa-solid fa-chevron-down"></i>
             </a>
-            <a href="Chat_counselor.html" class="nav-item">
-                <i class="fa-solid fa-comments"></i>
-                <span class="nav-item-text">상담사 채팅</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </a>
-        </nav>
+            </nav>
         <a href="#" class="settings-btn"><i class="fa-solid fa-gear"></i><span class="btn-text"> Settings</span></a>
         <a href="Login.html" class="logout-btn" onclick="localStorage.clear();"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="btn-text"> Logout Account</span></a>
     </aside>
@@ -193,8 +189,20 @@
             <div class="chat-input-area">
                 <div class="chat-input-row">
                     <textarea id="messageInput" placeholder="상담사에게 마음 편히 고민을 말해보세요." rows="1"></textarea>
+                    <button type="button" class="btn-icon" id="btnImage" title="이미지"><i class="fa-solid fa-image"></i></button>
                     <button type="button" class="btn-icon" id="btnVideo" title="영상"><i class="fa-solid fa-video"></i></button>
                     <button type="button" class="btn-send" id="btnSend">전송</button>
+                </div>
+            </div>
+
+            <div class="modal-overlay" id="recordingConsentModal">
+                <div class="modal-box">
+                    <div class="modal-title">영상 녹화 동의</div>
+                    <div class="modal-text">더 나은 상담 제공을 위해 상담 과정이 녹화될 수 있습니다.<br>계속하시겠습니까?</div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-confirm" id="recordingConsentConfirm">동의 및 계속</button>
+                        <button type="button" class="btn-cancel" onclick="this.closest('.modal-overlay').classList.remove('show')">취소하기</button>
+                    </div>
                 </div>
             </div>
 
@@ -206,7 +214,7 @@
                             <span class="src-icon"><i class="fa-solid fa-camera"></i></span>
                             <span>
                                 <div class="src-title">📷 웹캠</div>
-                                <div class="src-sub">카메라로 실시간 감정 분석 데이터 전송</div>
+                                <div class="src-sub">카메라로 실시간 데이터 전송</div>
                             </span>
                         </button>
                         <button type="button" class="source-btn file-btn" id="btnSelectFile">
@@ -217,32 +225,12 @@
                             </span>
                         </button>
                     </div>
-                    <button type="button" class="btn-cancel" id="btnSourceCancel" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e0e4f0;background:#fff;color:#666;font-size:0.9rem;cursor:pointer;">취소</button>
+                    <button type="button" class="btn-cancel" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e0e4f0;background:#fff;color:#666;font-size:0.9rem;cursor:pointer;" onclick="this.closest('.modal-overlay').classList.remove('show')">취소</button>
                 </div>
             </div>
             
-            <div class="modal-overlay" id="fileConsentModal">
-                <div class="modal-box">
-                    <div class="modal-title">동영상 파일 안내</div>
-                    <div class="modal-text">더 나은 상담 제공을 위해 선택한 동영상 파일로 분석을 진행합니다.<br>계속하시겠습니까?</div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn-confirm" id="fileConsentConfirm">계속하기</button>
-                        <button type="button" class="btn-cancel" id="fileConsentCancel">취소하기</button>
-                    </div>
-                </div>
-            </div>
-            <input type="file" id="videoFileInput" accept="video/*">
-
-            <div class="modal-overlay" id="videoConsentModal">
-                <div class="modal-box">
-                    <div class="modal-title">영상 전송 동의</div>
-                    <div class="modal-text">원활한 상담을 위해 상담사에게 영상 분석 데이터가 전송됩니다.<br>계속하시겠습니까?</div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn-confirm" id="videoConsentConfirm">동의 및 계속</button>
-                        <button type="button" class="btn-cancel" id="videoConsentCancel">취소하기</button>
-                    </div>
-                </div>
-            </div>
+            <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
+            <input type="file" id="videoFileInput" accept="video/*" style="display:none;">
 
             <div class="modal-overlay" id="endSessionModal">
                 <div class="modal-box">
@@ -257,7 +245,7 @@
             
             <div class="modal-overlay" id="thankYouModal">
                 <div class="modal-box modal-box-simple">
-                    <div class="modal-text-only">상담에 응해주셔서 감사합니다.<br>오늘 대화를 통해 새롭게 깨닫게 된 점이 있나요?</div>
+                    <div class="modal-text-only">상담에 응해주셔서 감사합니다.</div>
                     <div class="modal-one-line-wrap">
                         <label for="thankYouOneLine">한줄평</label>
                         <input type="text" class="modal-one-line-input" id="thankYouOneLine" placeholder="한줄평을 입력해 주세요." maxlength="200">
@@ -281,39 +269,33 @@
                     <span class="placeholder" id="videoPlaceholder">
                         <span class="icon-wrap"><i class="fa-solid fa-video-slash"></i></span>
                         영상을 켜주세요
-                        <span class="hint">하단 입력창에서 영상 아이콘을 <br>눌러 시작하세요</span>
                     </span>
                 </div>
-                <div style="font-size: 0.8rem; color: #888; margin-top: 15px; line-height: 1.5; text-align: center;">
-                    송출되는 영상 데이터는 상담사의 원활한 조언을 돕기 위해 실시간으로 전송됩니다.
-                </div>
             </div>
-            </aside>
+        </aside>
     </div>
 
     <script>
-        const API_BASE_URL = 'http://127.0.0.1:8000';
+        
         const ANALYZE_URL = 'http://127.0.0.1:8001/analyze'; 
         const clientId = localStorage.getItem('client_id') || 1; 
         const counselorId = localStorage.getItem('counselor_id') || 1; 
         const clientName = localStorage.getItem('client_name') || '내담자';
 
-        // UI 세팅
+        let windowSessId = null;
+        let lastMsgCount = 0;
+        let isPolling = false;
+
         document.getElementById('displayClientName').innerText = clientName;
         document.getElementById('headerClientName').innerText = clientName;
 
-        // 사이드바 토글
-        document.getElementById('sidebarToggle').addEventListener('click', function () {
+        const clientEmail = localStorage.getItem('client_email') || '이메일 정보 없음';
+        const emailEl = document.getElementById('displayClientEmail');
+        if (emailEl) emailEl.innerText = clientEmail;
+
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('collapsed');
         });
-
-        function escapeHtml(s) { var div = document.createElement('div'); div.textContent = s; return div.innerHTML; }
-
-        // ==========================================
-        // 1. API 통신 및 대화창 정렬 개선
-        // ==========================================
-        let lastMsgCount = 0;
-        let isPolling = false;
 
         async function initSession() {
             try {
@@ -323,194 +305,152 @@
                     body: JSON.stringify({ client_id: Number(clientId), counselor_id: Number(counselorId) })
                 });
                 const data = await res.json();
-                if (data && data.sess_id) {
-                    window._mwSessId = data.sess_id;
-                    document.getElementById('headerSessionId').innerText = `SESS-${data.sess_id} · 실시간 상담 중`;
-                    
-                    // 동의 완료 기록
-                    await fetch(`${API_BASE_URL}/sessions/${data.sess_id}/consent`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ok_text: true, ok_face: true })
-                    });
+                if (data.sess_id) {
+                    windowSessId = data.sess_id;
+                    document.getElementById('headerSessionId').innerText = `SESS-${data.sess_id} · 상담 진행 중`;
                     setInterval(fetchMessages, 2000);
                 }
-            } catch (e) { console.error("세션 초기화 실패"); }
-        }
-
-        async function fetchMessages() {
-            if(!window._mwSessId || isPolling) return;
-            isPolling = true;
-            try {
-                const res = await fetch(`${API_BASE_URL}/sessions/${window._mwSessId}/messages?limit=200`);
-                const data = await res.json();
-                const msgs = data.items || [];
-                if (msgs.length > lastMsgCount) {
-                    renderMessages(msgs.reverse());
-                    lastMsgCount = msgs.length;
-                }
-            } catch (e) { }
-            finally { isPolling = false; }
+            } catch (e) { console.error("세션 실패"); }
         }
 
         function renderMessages(msgs) {
             const container = document.getElementById('chatMessages');
             container.innerHTML = '';
-            
             msgs.forEach(m => {
-                // 내담자(본인)이면 무조건 'msg-me' 클래스 적용하여 오른쪽으로 밀착
                 const isMe = m.speaker === 'CLIENT'; 
-                const who = isMe ? '내담자' : '상담사';
-                const cssClass = isMe ? 'msg-me' : 'msg-other';
                 const timeStr = new Date(m.at).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
-                
                 const div = document.createElement('div');
-                div.className = `chat-msg ${cssClass}`;
-                div.innerHTML = `<div class="bubble"><div class="who">${who}</div>${escapeHtml(m.text)}<div class="time">${timeStr}</div></div>`;
+                div.className = `chat-msg ${isMe ? 'msg-me' : 'msg-other'}`;
+                
+                let content = m.text;
+                if (content && content.startsWith('data:image')) {
+                    content = `<img src="${content}" alt="전송 이미지">`;
+                }
+                
+                div.innerHTML = `<div class="bubble"><div class="who">${isMe ? '나' : '상담사'}</div>${content}<div class="time">${timeStr}</div></div>`;
                 container.appendChild(div);
             });
             container.scrollTop = container.scrollHeight;
         }
 
-        // ==========================================
-        // 2. 메시지 전송 로직
-        // ==========================================
-        const messageInput = document.getElementById('messageInput');
-        const btnSend = document.getElementById('btnSend');
+        async function fetchMessages() {
+            if(!windowSessId || isPolling) return;
+            isPolling = true;
+            try {
+                const res = await fetch(`${API_BASE_URL}/sessions/${windowSessId}/messages?limit=100`);
+                const data = await res.json();
+                const msgs = data.items || [];
+                if (msgs.length > lastMsgCount) { renderMessages(msgs.reverse()); lastMsgCount = msgs.length; }
+            } catch (e) { } finally { isPolling = false; }
+        }
 
-        async function sendMessage() {
-            const text = messageInput.value.trim();
-            if (!text || !window._mwSessId) return;
-            
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-
+        async function postMessage(payload) {
             try {
                 await fetch(`${API_BASE_URL}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sess_id: Number(window._mwSessId), speaker: 'CLIENT', speaker_id: Number(clientId), text: text, stt_conf: 0.0
-                    })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-                fetchMessages(); 
-            } catch(e) { }
+                fetchMessages();
+            } catch(e) {}
         }
 
-        btnSend.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-        messageInput.addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 140) + 'px'; });
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text || !windowSessId) return;
+            input.value = '';
+            await postMessage({ sess_id: Number(windowSessId), speaker: 'CLIENT', speaker_id: Number(clientId), text: text, stt_conf: 0.0 });
+        }
 
+        // 이미지 버튼 로직
+        document.getElementById('btnImage').addEventListener('click', () => document.getElementById('imageFileInput').click());
+        document.getElementById('imageFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && windowSessId) {
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    await postMessage({ sess_id: Number(windowSessId), speaker: 'CLIENT', speaker_id: Number(clientId), text: ev.target.result, stt_conf: 0.0 });
+                };
+                reader.readAsDataURL(file);
+                this.value = '';
+            }
+        });
 
-        // ==========================================
-        // 3. 백엔드로만 전송하는 딥페이스 영상 캡처 로직 복구 
-        // ==========================================
+        // 영상 로직 (통합 모달 적용)
         const btnVideo = document.getElementById('btnVideo');
+        const recordingModal = document.getElementById('recordingConsentModal');
+        const sourceModal = document.getElementById('videoSourceModal');
         const localVideo = document.getElementById('localVideo');
-        const videoPlaceholder = document.getElementById('videoPlaceholder');
         let analysisTimer = null;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 320; canvas.height = 240;
 
-        // 화면 표출 없이 백엔드로 이미지 넘기는 역할만 수행
-        async function analyzeFrame() {
-            if (!window._mwSessId || localVideo.style.display === 'none') return;
-            try {
-                ctx.drawImage(localVideo, 0, 0, 320, 240);
-                const b64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-                await fetch(ANALYZE_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: String(window._mwSessId || 'mindway'), image_base64: 'data:image/jpeg;base64,' + b64, sess_db_id: window._mwSessId })
-                });
-                // (이전에 있던 updateEmotionUI() 호출 구문 완전히 삭제)
-            } catch (e) {}
-        }
+        btnVideo.addEventListener('click', () => {
+            if (btnVideo.classList.contains('on')) stopVideo();
+            else recordingModal.classList.add('show');
+        });
 
-        function startVideo() {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(stream => {
-                localVideo.srcObject = stream;
-                localVideo.style.display = 'block';
-                videoPlaceholder.style.display = 'none';
-                btnVideo.classList.add('on');
-                analysisTimer = setInterval(analyzeFrame, 1000);
-            }).catch(() => {
-                alert('카메라 연결 실패');
-            });
-        }
-
-        function startVideoFromFile(file) {
-            const url = URL.createObjectURL(file);
-            localVideo._fileUrl = url;
-            localVideo.srcObject = null;
-            localVideo.src = url;
-            localVideo.loop = true;
-            localVideo.muted = true;
-            localVideo.play().then(() => {
-                localVideo.style.display = 'block';
-                videoPlaceholder.style.display = 'none';
-                btnVideo.classList.add('on');
-                analysisTimer = setInterval(analyzeFrame, 1200);
-            });
-        }
-
-        function stopVideo() {
-            if (localVideo.srcObject) { localVideo.srcObject.getTracks().forEach(t => t.stop()); localVideo.srcObject = null; }
-            if (localVideo._fileUrl) { URL.revokeObjectURL(localVideo._fileUrl); localVideo._fileUrl = null; localVideo.src = ''; }
-            localVideo.style.display = 'none';
-            videoPlaceholder.style.display = 'flex';
-            btnVideo.classList.remove('on');
-            if (analysisTimer) clearInterval(analysisTimer);
-        }
-
-        const videoSourceModal = document.getElementById('videoSourceModal');
-        btnVideo.addEventListener('click', function () {
-            if (this.classList.contains('on')) stopVideo();
-            else videoSourceModal.classList.add('show');
+        document.getElementById('recordingConsentConfirm').addEventListener('click', () => {
+            recordingModal.classList.remove('show');
+            sourceModal.classList.add('show');
         });
 
         document.getElementById('btnSelectWebcam').addEventListener('click', () => {
-            videoSourceModal.classList.remove('show');
-            document.getElementById('videoConsentModal').classList.add('show');
+            sourceModal.classList.remove('show');
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                localVideo.srcObject = stream;
+                onVideoStart();
+            });
         });
+
         document.getElementById('btnSelectFile').addEventListener('click', () => {
-            videoSourceModal.classList.remove('show');
-            document.getElementById('fileConsentModal').classList.add('show');
+            sourceModal.classList.remove('show');
+            document.getElementById('videoFileInput').click();
         });
-        document.getElementById('videoConsentConfirm').addEventListener('click', () => { document.getElementById('videoConsentModal').classList.remove('show'); startVideo(); });
-        document.getElementById('fileConsentConfirm').addEventListener('click', () => { document.getElementById('fileConsentModal').classList.remove('show'); document.getElementById('videoFileInput').click(); });
-        document.getElementById('videoFileInput').addEventListener('change', function () { if (this.files[0]) startVideoFromFile(this.files[0]); this.value = ''; });
-        document.getElementById('btnVideoEnd').addEventListener('click', () => stopVideo());
 
-        // ==========================================
-        // 4. 세션 종료 
-        // ==========================================
-        document.querySelector('.btn-end-session').addEventListener('click', () => document.getElementById('endSessionModal').classList.add('show'));
-        
-        function closeSession(sat) {
-            document.getElementById('endSessionModal').classList.remove('show');
-            if (window._mwSessId) {
-                fetch(`${API_BASE_URL}/sessions/${window._mwSessId}/close`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ end_reason: 'NORMAL', sat: sat })
-                });
+        document.getElementById('videoFileInput').addEventListener('change', function() {
+            if (this.files[0]) {
+                localVideo.src = URL.createObjectURL(this.files[0]);
+                localVideo.loop = true;
+                onVideoStart();
             }
-            document.getElementById('thankYouModal').classList.add('show');
+        });
+
+        function onVideoStart() {
+            localVideo.style.display = 'block';
+            document.getElementById('videoPlaceholder').style.display = 'none';
+            btnVideo.classList.add('on');
+            analysisTimer = setInterval(analyzeFrame, 1000);
         }
-        document.getElementById('endSessionSatisfy').addEventListener('click', () => closeSession(1));
-        document.getElementById('endSessionDissatisfy').addEventListener('click', () => closeSession(0));
-        document.getElementById('thankYouSaveConfirm').addEventListener('click', () => {
-            document.getElementById('thankYouModal').classList.remove('show');
-            location.href = 'Login.html'; // 종료 후 이동
-        });
 
-        // 팝업 닫기 공통
-        document.querySelectorAll('.btn-cancel, .modal-overlay').forEach(el => {
-            el.addEventListener('click', e => { if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('btn-cancel')) e.target.closest('.modal-overlay').classList.remove('show'); });
-        });
+        function stopVideo() {
+            if (localVideo.srcObject) localVideo.srcObject.getTracks().forEach(t => t.stop());
+            localVideo.srcObject = null; localVideo.src = '';
+            localVideo.style.display = 'none';
+            document.getElementById('videoPlaceholder').style.display = 'flex';
+            btnVideo.classList.remove('on');
+            clearInterval(analysisTimer);
+        }
 
-        // 페이지 시작
+        async function analyzeFrame() {
+            if (!windowSessId || localVideo.style.display === 'none') return;
+            const canvas = document.createElement('canvas');
+            canvas.width = 320; canvas.height = 240;
+            canvas.getContext('2d').drawImage(localVideo, 0, 0, 320, 240);
+            const b64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+            try {
+                fetch(ANALYZE_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: String(windowSessId), image_base64: 'data:image/jpeg;base64,' + b64, sess_db_id: windowSessId })
+                });
+            } catch (e) {}
+        }
+
+        document.getElementById('btnSend').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+        document.getElementById('btnVideoEnd').addEventListener('click', stopVideo);
+        document.querySelector('.btn-end-session').addEventListener('click', () => document.getElementById('endSessionModal').classList.add('show'));
+        document.getElementById('endSessionSatisfy').addEventListener('click', () => { document.getElementById('endSessionModal').classList.remove('show'); document.getElementById('thankYouModal').classList.add('show'); });
+        document.getElementById('thankYouSaveConfirm').addEventListener('click', () => location.href = 'Login.html');
+
         document.addEventListener("DOMContentLoaded", initSession);
     </script>
 </body>

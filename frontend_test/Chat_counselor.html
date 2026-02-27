@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindWay - 실시간 상담 (상담사)</title>
+    
+    <script src="./config.js"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -180,26 +183,20 @@
             <div class="sidebar-header-inner">
                 <div class="brand-name">MindWay</div>
                 <div class="user-profile">
-                    <div class="user-name" id="displayCounselorName">상담사</div>
-                    <div class="user-email">마음을 여는 공간</div>
+                    <div class="user-name" id="displayCounselorName"></div>
+                    <div class="user-email" id="displayCounselorEmail"></div>
                 </div>
             </div>
         </div>
-        <div class="menu-label">내담자 상담</div>
+        <div class="menu-label">상담사 메뉴</div>
         <nav class="nav-menu">
-            <a href="Chat_client.html" class="nav-item">
-                <i class="fa-solid fa-user"></i>
-                <span class="nav-item-text">내담자 상담</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </a>
             <a href="Chat_counselor.html" class="nav-item active">
                 <i class="fa-solid fa-comments"></i>
                 <span class="nav-item-text">상담사 채팅</span>
-                <i class="fa-solid fa-chevron-down"></i>
             </a>
         </nav>
-        <a href="Main.html" class="settings-btn">
-            <i class="fa-solid fa-gear"></i><span class="btn-text"> 대시보드로 이동</span>
+        <a href="Appt.html" class="settings-btn">
+            <i class="fa-solid fa-house"></i><span class="btn-text"> 예약리스트로 이동</span>
         </a>
         <a href="Login.html" class="logout-btn" onclick="localStorage.clear();">
             <i class="fa-solid fa-arrow-right-from-bracket"></i><span class="btn-text"> Logout Account</span>
@@ -234,6 +231,7 @@
             <div class="chat-input-area">
                 <div class="chat-input-row">
                     <textarea id="messageInput" placeholder="내담자에게 전송할 답변을 입력하세요." rows="1"></textarea>
+                    <button type="button" class="btn-icon" id="btnImage" title="이미지"><i class="fa-solid fa-image"></i></button>
                     <button type="button" class="btn-icon" id="btnVideo" title="영상 연결"><i class="fa-solid fa-video"></i></button>
                     <button type="button" class="btn-send" id="btnSend">전송</button>
                 </div>
@@ -273,6 +271,7 @@
                 </div>
             </div>
             <input type="file" id="videoFileInput" accept="video/*">
+            <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
 
         </main>
         
@@ -320,14 +319,19 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'http://127.0.0.1:8000';
+        // ★ 파일 전용 독립 API 경로 설정 유지
         const ANALYZE_URL = 'http://127.0.0.1:8001/analyze'; 
+        
         const clientId = localStorage.getItem('client_id') || 1; 
         const counselorId = localStorage.getItem('counselor_id') || 1; 
         const counselorName = localStorage.getItem('counselor_name') || '상담사';
 
         document.getElementById('displayCounselorName').innerText = counselorName;
         document.getElementById('headerCounselorName').innerText = counselorName;
+
+        const counselorEmail = localStorage.getItem('counselor_email') || '이메일 정보 없음';
+        const emailEl = document.getElementById('displayCounselorEmail');
+        if (emailEl) emailEl.innerText = counselorEmail;
 
         // 사이드바 토글
         (function () {
@@ -358,6 +362,7 @@
 
         async function initSession() {
             try {
+                // API_BASE_URL은 config.js에서 가져옵니다.
                 const res = await fetch(`${API_BASE_URL}/client/start-session`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -405,7 +410,10 @@
                     const lastMsg = sortedMsgs[sortedMsgs.length - 1];
                     if (lastMsg.speaker === 'CLIENT' && lastMsg.id !== lastAnalyzedMsgId) {
                         lastAnalyzedMsgId = lastMsg.id;
-                        fetchAiSuggestion(lastMsg.text, sortedMsgs);
+                        // 이미지는 AI 분석에서 제외 (data:image 체크)
+                        if (lastMsg.text && !lastMsg.text.startsWith('data:image')) {
+                            fetchAiSuggestion(lastMsg.text, sortedMsgs);
+                        }
                     }
                 }
             } catch (e) { }
@@ -421,9 +429,17 @@
                 const cssClass = isMe ? 'counselor' : 'client';
                 const timeStr = new Date(m.at).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
                 
+                let content = '';
+                // 상호 이미지 확인 로직 추가: data:image로 시작하면 이미지 태그로 렌더링
+                if (m.text && m.text.startsWith('data:image')) {
+                    content = `<img src="${m.text}" style="max-width:100%; border-radius:8px; margin-top:8px; display:block; cursor:pointer;" onclick="window.open(this.src)">`;
+                } else {
+                    content = escapeHtml(m.text);
+                }
+
                 const div = document.createElement('div');
                 div.className = `chat-msg ${cssClass}`;
-                div.innerHTML = `<div class="bubble"><div class="who">${who}</div>${escapeHtml(m.text)}<div class="time">${timeStr}</div></div>`;
+                div.innerHTML = `<div class="bubble"><div class="who">${who}</div>${content}<div class="time">${timeStr}</div></div>`;
                 container.appendChild(div);
             });
             container.scrollTop = container.scrollHeight;
@@ -440,7 +456,7 @@
             
             const history = allMsgs.slice(-4).map(m => ({
                 role: m.speaker === 'COUNSELOR' ? 'counselor' : 'client',
-                text: m.text
+                text: m.text.startsWith('data:image') ? '(이미지 메시지)' : m.text
             }));
 
             try {
@@ -465,7 +481,6 @@
                             btn.className = 'ai-helper-chip';
                             btn.innerText = s.type;
                             btn.title = s.rationale; 
-                            // JS 내 따옴표 충돌을 막기 위해 dataset에 안전하게 저장
                             btn.dataset.direction = s.direction;
                             chipsContainer.appendChild(btn);
                         });
@@ -487,13 +502,8 @@
         const messageInput = document.getElementById('messageInput');
         const btnSend = document.getElementById('btnSend');
 
-        async function sendMessage() {
-            const text = messageInput.value.trim();
+        async function postMessage(text) {
             if (!text || !window._mwSessId) return;
-            
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-
             try {
                 await fetch(`${API_BASE_URL}/messages`, {
                     method: 'POST',
@@ -503,7 +513,15 @@
                     })
                 });
                 fetchMessages(); 
-            } catch(e) {}
+            } catch(e) { console.error("메시지 전송 실패:", e); }
+        }
+
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            await postMessage(text);
         }
 
         btnSend.addEventListener('click', sendMessage);
@@ -514,7 +532,23 @@
             this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 140) + 'px';
         });
 
-        // AI 헬퍼 문구 클릭 시 입력창에 반영 (따옴표 에러 방지를 위해 dataset 활용)
+        // 이미지 전송 로직 추가
+        const btnImage = document.getElementById('btnImage');
+        const imageFileInput = document.getElementById('imageFileInput');
+
+        btnImage.addEventListener('click', () => imageFileInput.click());
+        imageFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && window._mwSessId) {
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    await postMessage(event.target.result); // Base64 데이터를 text 필드로 전송
+                };
+                reader.readAsDataURL(file);
+                this.value = ''; // 같은 파일 재선택 가능하게 초기화
+            }
+        });
+
         document.getElementById('aiHelperChips').addEventListener('click', function (e) {
             const chip = e.target.closest('.ai-helper-chip');
             if (chip && chip.dataset.direction) {
@@ -527,7 +561,6 @@
         // ==========================================
         // 4. 영상 제어 및 딥페이스 분석
         // ==========================================
-        const btnVideo = document.getElementById('btnVideo');
         const localVideo = document.getElementById('localVideo');
         const videoPlaceholder = document.getElementById('videoPlaceholder');
         let analysisTimer = null;
@@ -634,7 +667,6 @@
             });
         }
 
-        const endSessionModal = document.getElementById('endSessionModal');
         document.querySelector('.btn-end-session').addEventListener('click', () => { 
             const endModal = document.getElementById('endSessionModal');
             if(endModal) endModal.classList.add('show'); 

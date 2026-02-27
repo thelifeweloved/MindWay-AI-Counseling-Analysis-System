@@ -7,7 +7,7 @@ import httpx                                         # ★ 추가: main.py /face
 from routers.deepface import analyze_face_logic      # ★ 수정: vision_service → routers.deepface
 
 app = FastAPI(title="MindWay Local Vision Server")
-
+# 8001 서버 역할
 # ★ 추가: CORS 설정 - Chat_client.html, Chat_counselor.html에서 직접 호출 가능하게
 app.add_middleware(
     CORSMiddleware,
