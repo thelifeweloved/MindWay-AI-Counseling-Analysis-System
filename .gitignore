@@ -3,3 +3,8 @@ __pycache__/
 .env
 *.log
 .env
+# local env
+.env
+venv/
+__pycache__/
+*.pyc
