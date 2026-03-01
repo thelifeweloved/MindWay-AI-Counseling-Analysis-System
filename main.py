@@ -20,8 +20,10 @@ from routers.helper import router as helper_router
 load_dotenv()
 app = FastAPI(title="Mindway Post-Analysis API", version="1.1.2")
 
-app.mount("/static", StaticFiles(directory="/root/ThinkBIG/frontend_test"), name="static")
-
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "frontend_test")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

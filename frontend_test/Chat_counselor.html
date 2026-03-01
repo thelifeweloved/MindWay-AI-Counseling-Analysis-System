@@ -403,16 +403,14 @@
                 const data = await res.json();
                 const msgs = data.items || [];
                 if (msgs.length > lastMsgCount) {
-                    const sortedMsgs = msgs.reverse();
-                    renderMessages(sortedMsgs);
+                    renderMessages(msgs);
                     lastMsgCount = msgs.length;
-                    
-                    const lastMsg = sortedMsgs[sortedMsgs.length - 1];
+
+                    const lastMsg = msgs[msgs.length - 1];
                     if (lastMsg.speaker === 'CLIENT' && lastMsg.id !== lastAnalyzedMsgId) {
                         lastAnalyzedMsgId = lastMsg.id;
-                        // 이미지는 AI 분석에서 제외 (data:image 체크)
                         if (lastMsg.text && !lastMsg.text.startsWith('data:image')) {
-                            fetchAiSuggestion(lastMsg.text, sortedMsgs);
+                            fetchAiSuggestion(lastMsg.text, msgs);
                         }
                     }
                 }
@@ -479,8 +477,8 @@
                             const btn = document.createElement('button');
                             btn.type = 'button';
                             btn.className = 'ai-helper-chip';
-                            btn.innerText = s.type;
-                            btn.title = s.rationale; 
+                            btn.innerText = s.direction;   // 실제 제안 문장 표시
+                            btn.title = s.type + ' — ' + s.rationale;  // 호버 시 타입+근거 표시
                             btn.dataset.direction = s.direction;
                             chipsContainer.appendChild(btn);
                         });
