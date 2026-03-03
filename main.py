@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional, List, Dict, Any
 from fastapi.encoders import jsonable_encoder
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +24,10 @@ from sqlalchemy.orm import Session
 load_dotenv()
 app = FastAPI(title="Mindway Post-Analysis API", version="1.1.2")
 
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "frontend_test")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
