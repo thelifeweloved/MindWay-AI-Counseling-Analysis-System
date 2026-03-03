@@ -13,6 +13,10 @@ import uuid
 import hashlib
 from db import get_db
 from routers.helper import router as helper_router
+from routers.api import api_router
+from fastapi import FastAPI, Depends, HTTPException, Query, BackgroundTasks #
+from sqlalchemy.orm import Session
+
 # from routers.analysis_services.runner import run_core_features
 # from routers.analysis_services.clova_client import ClovaXClient
 
@@ -28,7 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(helper_router)
-
+app.include_router(api_router)
 # ---------------------------------------------------------
 # Pydantic Models (명세서 및 프론트엔드 연동 규격 반영)
 # ---------------------------------------------------------
@@ -85,6 +89,9 @@ class SessionCloseRequest(BaseModel):
     sat:         Optional[int] = Field(None, ge=0, le=1)
     sat_note:   Optional[str] = None
 
+class AlertStatusUpdate(BaseModel):
+    status: str
+
 class NoteUpdateRequest(BaseModel):
     topic_id: Optional[int] = Field(1, ge=1)
     note: str
@@ -93,6 +100,11 @@ class NoteUpdateRequest(BaseModel):
 class ApptUpdateRequest(BaseModel):
     counselor_id: Optional[int] = None
     status: Optional[str] = None
+
+class ApptCreateRequest(BaseModel):
+    client_id: int
+    counselor_id: Optional[int] = None
+    at: str
 
 # ---------------------------------------------------------
 # Helpers & Logic
@@ -361,15 +373,16 @@ def session_emotions(sess_id: int, db: Session = Depends(get_db)):
     return {"items": jsonable_encoder(list(result))}
 
 @app.get("/appointments")
-def get_appointments(counselor_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+def get_appointments(counselor_id: Optional[int] = Query(None), client_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
     sql = """
-        SELECT a.id, a.counselor_id, c.name AS client_name, a.at, a.status, a.created_at
+        SELECT a.id, a.client_id, a.counselor_id, c.name AS client_name, a.at, a.status, a.created_at
         FROM appt a 
         JOIN client c ON a.client_id = c.id 
         WHERE (:cid IS NULL OR a.counselor_id = :cid) 
+          AND (:clid IS NULL OR a.client_id = :clid)
         ORDER BY a.at ASC
     """
-    result = db.execute(text(sql), {"cid": counselor_id}).mappings().all()
+    result = db.execute(text(sql), {"cid": counselor_id, "clid": client_id}).mappings().all()
     return {"items": jsonable_encoder(list(result))}
 
 @app.get("/counselors")
@@ -566,10 +579,140 @@ def create_stt(payload: SttCreate, db: Session = Depends(get_db)):
         return {"status": "saved"}
     except Exception as e:
         db.rollback(); raise HTTPException(status_code=400, detail=str(e))
+    
+# ---------------------------------------------------------
+# 대시보드 및 알림 연동 API (이안수정_Main.html 전용)
+# ---------------------------------------------------------
+
+@app.get("/dashboard")
+def get_dashboard_data(db: Session = Depends(get_db)):
+    """대시보드 상단 KPI 카드 및 최근 알림 데이터를 가져옵니다."""
+    try:
+        # 1. 상태별 내담자 수 집계 (안정, 주의, 개선필요)
+        status_stats = db.execute(text("""
+            SELECT status, COUNT(*) as cnt 
+            FROM client 
+            GROUP BY status
+        """)).mappings().all()
+        
+        stats_dict = {s['status']: s['cnt'] for s in status_stats}
+        
+        # 2. 최근 알림 리스트 (최신순 5개)
+        alerts = db.execute(text("""
+            SELECT a.*, c.name as client_name 
+            FROM alert a
+            JOIN sess s ON a.sess_id = s.id
+            JOIN client c ON s.client_id = c.id
+            ORDER BY a.at DESC LIMIT 5
+        """)).mappings().all()
+
+        return {
+            "total_clients": sum(stats_dict.values()),
+            "stable_clients": stats_dict.get("안정", 0),
+            "warning_clients": stats_dict.get("주의", 0),
+            "critical_clients": stats_dict.get("개선필요", 0),
+            "alerts": [dict(a) for a in alerts],
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/alerts")
+def get_filtered_alerts(
+    alert_type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    sort: str = Query("desc"),
+    db: Session = Depends(get_db)
+):
+    """이안수정_Main.html의 필터 기능에 대응하는 알림 조회 API"""
+    query_str = """
+        SELECT a.*, c.name as client_name 
+        FROM alert a 
+        JOIN sess s ON a.sess_id = s.id 
+        JOIN client c ON s.client_id = c.id 
+        WHERE 1=1
+    """
+    params = {}
+
+    if alert_type:
+        query_str += " AND a.type = :alert_type"
+        params["alert_type"] = alert_type
+    
+    if status:
+        query_str += " AND a.status = :status"
+        params["status"] = status
+
+    # 정렬 (최신순/과거순)
+    query_str += f" ORDER BY a.at {sort.upper()}"
+    
+    result = db.execute(text(query_str), params).mappings().all()
+    return {"items": [dict(r) for r in result]}
+
+@app.patch("/api/alerts/{alert_id}/status")
+def update_alert_status(alert_id: int, payload: AlertStatusUpdate, db: Session = Depends(get_db)):
+    """알림 리스트에서 '확인' 버튼을 눌렀을 때 상태를 변경합니다."""
+    try:
+        db.execute(text("UPDATE alert SET status = :status WHERE id = :aid"), 
+                   {"status": payload.status, "aid": alert_id})
+        db.commit()
+        return {"ok": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+    
+# [추가됨] 새로운 예약을 DB에 저장하는 API (주문 접수처)
+@app.post("/appointments")
+def create_appointment(payload: ApptCreateRequest, db: Session = Depends(get_db)):
+    try:
+        sql = """
+            INSERT INTO appt (client_id, counselor_id, at, status, created_at)
+            VALUES (:client_id, :counselor_id, :at, 'REQUESTED', NOW())
+        """
+        db.execute(text(sql), {
+            "client_id": payload.client_id,
+            "counselor_id": payload.counselor_id,
+            "at": payload.at
+        })
+        db.commit() # 장부에 확정 기록
+        return {"status": "success", "message": "상담 예약이 접수되었습니다."}
+    except Exception as e:
+        db.rollback() # 에러 발생 시 기록 취소
+        raise HTTPException(status_code=400, detail=f"예약 저장 실패: {str(e)}")
+    
+
+    
+# 고민 유형 저장 모델
+class ClientTopicRequest(BaseModel):
+    client_id: int
+    topic_id: int
+    prio: int  # 우선순위 (1~3)
+
+# 1. 내담자 고민 유형 저장 (Chat_client.html 팝업에서 호출)
+@app.post("/client-topics")
+def save_client_topics(payload: List[ClientTopicRequest], db: Session = Depends(get_db)):
+    try:
+        # 기존 선택 데이터가 있다면 삭제 (최신 선택 반영)
+        db.execute(text("DELETE FROM client_topic WHERE client_id = :cid"), {"cid": payload[0].client_id})
+        
+        for item in payload:
+            db.execute(text("""
+                INSERT INTO client_topic (client_id, topic_id, prio, created_at)
+                VALUES (:cid, :tid, :prio, NOW())
+            """), {"cid": item.client_id, "tid": item.topic_id, "prio": item.prio})
+        db.commit()
+        return {"status": "success"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.post("/sessions/{sess_id}/close")
-def close_session(sess_id: int, payload: SessionCloseRequest, db: Session = Depends(get_db)):
+def close_session(sess_id: int, payload: SessionCloseRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)): #
     try:
+        # [단계 1] 세션 상태를 'CLOSED'로 변경하고 만족도 정보를 저장합니다.
         db.execute(text("""
             UPDATE sess SET end_at = NOW(), progress = 'CLOSED', 
             end_reason = :end_reason, sat = :sat, sat_note = :sat_note
@@ -579,11 +722,12 @@ def close_session(sess_id: int, payload: SessionCloseRequest, db: Session = Depe
             "end_reason": payload.end_reason,
             "sat":        payload.sat,
             "sat_note":   payload.sat_note
-        })
+        }) #
 
+        # [단계 2] 기존의 내담자 등급(상태) 판별 로직을 실행합니다.
         client_row = db.execute(text(
             "SELECT client_id FROM sess WHERE id = :sid"
-        ), {"sid": sess_id}).mappings().first()
+        ), {"sid": sess_id}).mappings().first() #
 
         if client_row:
             cid = client_row["client_id"]
@@ -594,13 +738,14 @@ def close_session(sess_id: int, payload: SessionCloseRequest, db: Session = Depe
                     SUM(CASE WHEN sat = 0 THEN 1 ELSE 0 END) AS unsat_cnt
                 FROM sess
                 WHERE client_id = :cid AND progress = 'CLOSED'
-            """), {"cid": cid}).mappings().first()
+            """), {"cid": cid}).mappings().first() #
 
             total       = int(stats["total"] or 0)
             dropout_cnt = int(stats["dropout_cnt"] or 0)
             unsat_cnt   = int(stats["unsat_cnt"] or 0)
             dropout_rate = (dropout_cnt / total) if total > 0 else 0
 
+            # 이탈률과 불만족 건수에 따른 상태 업데이트
             if dropout_rate >= 0.5:
                 new_status = "개선필요"
             elif dropout_rate >= 0.3 or unsat_cnt > 0:
@@ -610,33 +755,37 @@ def close_session(sess_id: int, payload: SessionCloseRequest, db: Session = Depe
 
             db.execute(text(
                 "UPDATE client SET status = :status WHERE id = :cid"
-            ), {"status": new_status, "cid": cid})
+            ), {"status": new_status, "cid": cid}) #
 
-        db.commit()
+        db.commit() # 여기까지의 변경 사항을 먼저 저장합니다.
 
-        # try:
-        #     clova = ClovaXClient(
-        #         api_key=os.getenv("CLOVA_API_KEY", ""),
-        #         endpoint_id=os.getenv("CLOVA_ENDPOINT_ID", ""),
-        #     )
-        #     run_core_features(
-        #         clova,
-        #         sess_id=sess_id,
-        #         topic_id=1,
-        #         host=os.getenv("DB_HOST", "localhost"),
-        #         port=int(os.getenv("DB_PORT", 3307)),
-        #         user=os.getenv("DB_USER", ""),
-        #         password=os.getenv("DB_PASSWORD", ""),
-        #         database=os.getenv("DB_NAME", ""),
-        #     )
-        # except Exception as e_run:
-        #     print(f"[runner 트리거 실패] {e_run}")
+        # [단계 3] 핵심 연동: 백그라운드에서 AI 분석 모델(Runner)을 가동합니다.
+        def run_analysis_bg(sid: int):
+            from db import SessionLocal
+            from routers.api import _build_clova_client
+            from routers.analysis.runner import run_core_features
+            
+            # 백그라운드 작업은 별도의 독립된 DB 세션을 사용해야 안전합니다.
+            bg_db = SessionLocal() 
+            try:
+                clova = _build_clova_client()
+                # runner.py의 핵심 분석 기능을 호출합니다.
+                run_core_features(clova, sess_id=sid, db=bg_db)
+                bg_db.commit()
+            except Exception as e:
+                bg_db.rollback()
+                print(f"[AI 분석 에러] sess_id={sid}, error={e}")
+            finally:
+                bg_db.close()
+
+        # 상담사 화면은 즉시 응답을 주고, 무거운 AI 분석은 서버 뒷단에서 처리합니다.
+        background_tasks.add_task(run_analysis_bg, sess_id)
 
         return {"status": "closed", "sess_id": sess_id, "end_reason": payload.end_reason}
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) #
 
 if __name__ == "__main__":
     import uvicorn

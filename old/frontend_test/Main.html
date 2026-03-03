@@ -1546,160 +1546,78 @@
         <header class="header">
             <h2 style="font-size: 1.5rem;">메인 대시보드</h2>
             <div class="search-bar">
-                <input type="text" id="searchAlert" placeholder="세션, 내담자, 신호 유형 검색">
+                <input type="text" id="searchAlert" placeholder="세션, 유형, 상태로 검색">
                 <i class="fa-solid fa-magnifying-glass search-icon" id="searchAlertIcon" title="검색"></i>
             </div>
         </header>
 
-        <!-- ① KPI 카드 4개 (기획 의도 기반으로 재설계) -->
         <div class="top-stats" id="report-kpi">
             <div class="stat-card stat-churn">
                 <div class="stat-label stat-label-with-alert">
-                    <i class="fa-solid fa-comment-medical kpi-alert-icon" aria-hidden="true"></i>
-                    진행 중 세션
+                    <i class="fa-solid fa-triangle-exclamation kpi-alert-icon" title="이탈 가능 세션 알림"
+                        aria-hidden="true"></i>
+                    이탈 가능 총 세션수
                 </div>
                 <div class="stat-value" id="kpi-sessions">0</div>
-                <div class="stat-label stat-label-sub">ACTIVE</div>
+                <div class="stat-label stat-label-sub">신호강도 0.65 이상</div>
             </div>
             <div class="stat-card stat-quality">
-                <div class="stat-label">평균 상담 품질</div>
+                <div class="stat-label">평균 품질 점수</div>
                 <div class="stat-value" id="kpi-quality">0</div>
-                <div class="stat-label stat-label-sub">quality.score 평균</div>
+                <div class="stat-label stat-label-sub">0~100</div>
             </div>
-            <div class="stat-card stat-satisfy">
-                <div class="stat-label">미해결 참고 신호</div>
+            <div class="stat-card stat-unassigned">
+                <div class="stat-label">해결된 이탈 신호</div>
+                <div class="stat-value" id="kpi-resolved">0</div>
+                <div class="stat-label stat-label-sub">RESOLVED</div>
+            </div>
+            <div class="stat-card stat-churn">
+                <div class="stat-label">미해결 이탈 신호</div>
                 <div class="stat-value" id="kpi-alerts">0</div>
                 <div class="stat-label stat-label-sub">DETECTED</div>
             </div>
-            <div class="stat-card stat-unassigned">
-                <div class="stat-label">주의·개선필요 내담자</div>
-                <div class="stat-value" id="kpi-risk-clients">0</div>
-                <div class="stat-label stat-label-sub">주의 + 개선필요</div>
-            </div>
         </div>
 
-        <!-- ② 우선 검토 세션 목록 -->
-        <section class="report-section" style="margin-top:24px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                <h3 class="section-title">우선 검토 세션</h3>
-                <span style="font-size:0.8rem; color:#aab0be;">신호 강도 높은 순 · 개선필요 내담자 우선</span>
-            </div>
-            <div class="card report-table-card" style="padding:0;">
-                <div class="report-table-wrap">
-                    <table class="report-data-table">
-                        <thead>
-                            <tr>
-                                <th>세션</th>
-                                <th>내담자</th>
-                                <th>내담자 등급</th>
-                                <th>최고 신호 강도</th>
-                                <th>흐름 점수</th>
-                                <th>품질 점수</th>
-                                <th>리포트</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-priority-sessions"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- ③ 차트 3종 + 예약 현황 패널 -->
-        <section class="report-section" style="margin-top:24px;">
-            <!-- 차트 행 1: 품질 추이 + 내담자 등급 분포 -->
-            <div class="report-two-col report-two-col-aligned" style="margin-bottom:20px;">
+        <section class="report-section" id="report-dropout">
+            <div class="report-two-col report-two-col-aligned">
                 <div class="report-col-block">
-                    <h3 class="section-title" style="margin-bottom:10px;">일별 상담 품질 추이</h3>
+                    <h3 class="section-title">미해결 세션관리</h3>
+                    <p class="report-section-desc">상태 확인이 필요한 세션입니다. 확인 후 버튼을 눌러 완료 처리하세요.</p>
+                    <div class="card report-card report-card-unresolved">
+                        <div class="unresolved-sessions-list" id="unresolvedSessionsList"></div>
+                    </div>
+                </div>
+                <div class="report-col-block">
+                    <h3 class="section-title">세션 품질 분석</h3>
+                    <p class="report-section-desc">세션별 상담 흐름(flow)·품질(score) 점수 (quality)</p>
                     <div class="card report-card">
+                        <h4>흐름·품질 추이</h4>
                         <div class="quality-flow-chart-wrap">
                             <canvas id="chart-quality-flow-dropout" height="200"></canvas>
                         </div>
                     </div>
                 </div>
-                <div class="report-col-block">
-                    <h3 class="section-title" style="margin-bottom:10px;">내담자 등급 분포</h3>
-                    <div class="card report-card" style="display:flex; align-items:center; justify-content:center;">
-                        <div style="width:200px; height:200px;">
-                            <canvas id="chart-client-grade"></canvas>
-                        </div>
-                    </div>
-                </div>
             </div>
-
-            <!-- 차트 행 2: 토픽별 세션 분포 (전체 너비) -->
-            <div style="margin-bottom:20px;">
-                <h3 class="section-title" style="margin-bottom:10px;">토픽별 세션 분포 <span style="font-size:0.75rem; font-weight:400; color:#aab0be; margin-left:6px;">상담 주제 분류 현황</span></h3>
-                <div class="card report-card">
-                    <div style="height:180px;">
-                        <canvas id="chart-topic-dist"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 예약 현황 패널 -->
-            <div>
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-                    <h3 class="section-title" id="appt-panel-section">예약 현황</h3>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <input type="text" id="apptPanelSearch" placeholder="내담자명 검색" style="padding:5px 10px; border:1px solid #dde0e7; border-radius:6px; font-size:0.82rem; outline:none; width:140px;">
-                        <select id="apptPanelStatusFilter" style="padding:5px 10px; border:1px solid #dde0e7; border-radius:6px; font-size:0.82rem; background:#fff; outline:none; cursor:pointer;">
-                            <option value="">전체 상태</option>
-                            <option value="REQUESTED">접수</option>
-                            <option value="CONFIRMED">확정</option>
-                            <option value="COMPLETED">완료</option>
-                            <option value="CANCELLED">취소</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card report-table-card" style="padding:0;">
-                    <div class="report-table-wrap">
-                        <table class="report-data-table">
-                            <thead>
-                                <tr>
-                                    <th>예약ID</th>
-                                    <th>내담자</th>
-                                    <th>예약 시각</th>
-                                    <th>상태</th>
-                                    <th>담당 상담사</th>
-                                    <th>상담 시작</th>
-                                </tr>
-                            </thead>
-                            <tbody id="appt-panel-tbody">
-                                <tr><td colspan="6" style="text-align:center; padding:20px; color:#aab0be;">예약 데이터를 불러오는 중...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ⑤ 참고 신호 로그 (개선) -->
-        <section class="report-section" style="margin-top:24px;">
             <div class="card report-table-card">
-                <div class="appt-header" style="margin-bottom:12px;">
-                    <h4 style="margin:0; font-size:0.95rem; color:#373f50; font-weight:600;">참고 신호 로그</h4>
+                <div class="appt-header" style="margin-bottom: 12px;">
+                    <h4 style="margin: 0; font-size: 0.95rem; color: #8b92a0;">최근 세션 목록</h4>
                     <div class="appt-header-filters">
-                        <select class="appt-filter-select" id="alertTypeFilter" title="신호 유형 필터">
-                            <option value="">전체 유형</option>
-                            <option value="CONTINUITY_SIGNAL">CONTINUITY_SIGNAL</option>
-                            <option value="DELAY">DELAY</option>
-                            <option value="SHORT">SHORT</option>
-                            <option value="NEG_SPIKE">NEG_SPIKE</option>
-                            <option value="RISK_WORD">RISK_WORD</option>
-                        </select>
-                        <select class="appt-filter-select" id="alertStatusFilter" title="상태 필터">
-                            <option value="">전체 상태</option>
-                            <option value="DETECTED">DETECTED</option>
-                            <option value="RESOLVED">RESOLVED</option>
+                        <span class="filter-label">상담단계</span>
+                        <select class="appt-filter-select" id="alertStageFilter" title="상담단계 필터">
+                            <option value="">전체</option>
+                            <option value="초기">초기</option>
+                            <option value="중기">중기</option>
+                            <option value="종결">종결</option>
                         </select>
                         <select class="appt-filter-select" id="alertSortBy" title="정렬 기준">
-                            <option value="score">강도순</option>
-                            <option value="date">날짜순</option>
+                            <option value="date">날짜별</option>
+                            <option value="time">시간별</option>
                         </select>
                     </div>
                 </div>
                 <div class="alert-list-filter-info" id="alertListFilterInfo">
-                    <span><span class="filter-type" id="alertFilterTypeLabel"></span> <span class="filter-status" id="alertFilterStatusLabel"></span></span>
+                    <span><span class="filter-type" id="alertFilterTypeLabel"></span> <span class="filter-status"
+                            id="alertFilterStatusLabel"></span></span>
                     <button type="button" class="btn-clear-filter" id="alertClearFilterBtn">전체 보기</button>
                 </div>
                 <div class="report-table-wrap">
@@ -1708,11 +1626,11 @@
                             <tr>
                                 <th>세션</th>
                                 <th>내담자</th>
+                                <th>상담단계</th>
                                 <th>유형</th>
-                                <th>신호강도</th>
                                 <th>상태</th>
+                                <th>신호강도</th>
                                 <th>탐지 시각</th>
-                                <th>조치</th>
                                 <th>리포트</th>
                             </tr>
                         </thead>
@@ -1766,11 +1684,7 @@
         let STATE = {
             sessions: [],
             alerts: [],
-            quality: [],
-            appts: [],
-            counselors: [],
-            clientGrade: [],
-            topicDist: []
+            quality: []
         };
 
         window._alertTypeFilter = null;
@@ -1791,43 +1705,36 @@
         async function fetchDashboardData() {
             try {
                 const cidQuery = counselorId ? `counselor_id=${counselorId}&` : '';
-                const cid = counselorId || 1;
 
-                const [sessRes, alertRes, apptRes, counselorRes, gradeRes, topicRes] = await Promise.all([
+                // 세션 목록과 이탈 신호 목록 동시 호출
+                const [sessRes, alertRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/sessions?${cidQuery}limit=100`),
-                    fetch(`${API_BASE_URL}/stats/recent-alerts?${cidQuery}`),
-                    fetch(`${API_BASE_URL}/appointments?${cidQuery}`),
-                    fetch(`${API_BASE_URL}/counselors`),
-                    fetch(`${API_BASE_URL}/stats/client-grade-dropout?counselor_id=${cid}`).catch(() => null),
-                    fetch(`${API_BASE_URL}/stats/topic-dist?counselor_id=${cid}`).catch(() => null)
+                    fetch(`${API_BASE_URL}/stats/recent-alerts?${cidQuery}`)
                 ]);
 
-                STATE.sessions  = (await sessRes.json()).items || [];
-                STATE.alerts    = (await alertRes.json()).items || [];
-                STATE.appts     = (await apptRes.json()).items || [];
-                STATE.counselors= (await counselorRes.json()).items || [];
-                STATE.clientGrade = gradeRes ? ((await gradeRes.json()).items || []) : [];
-                STATE.topicDist   = topicRes ? ((await topicRes.json()).items || []) : [];
+                const sessData = await sessRes.json();
+                const alertData = await alertRes.json();
 
-                // 최근 15개 세션 품질 데이터
+                STATE.sessions = sessData.items || [];
+                STATE.alerts = alertData.items || [];
+
+                // 차트에 띄울 최근 15개 세션의 품질 데이터 호출
                 const recentSessions = STATE.sessions.slice(0, 15);
-                const dashboards = await Promise.all(
-                    recentSessions.map(s =>
-                        fetch(`${API_BASE_URL}/sessions/${s.id}/dashboard`).then(r => r.json()).catch(() => null)
-                    )
+                const qualityPromises = recentSessions.map(s =>
+                    fetch(`${API_BASE_URL}/sessions/${s.id}/dashboard`)
+                        .then(r => r.json())
+                        .catch(() => null)
                 );
+
+                const dashboards = await Promise.all(qualityPromises);
                 STATE.quality = dashboards.filter(Boolean).map(d => ({
-                    sess_id: d.session?.id,
-                    client_name: d.session?.client_name || '',
-                    client_status: d.session?.client_status || '안정',
+                    sess_id: d.session.id,
                     flow: d.quality?.flow || 0,
                     score: d.quality?.score || 0,
-                    risk_score: d.risk_score || 0,
-                    start_at: d.session?.start_at || ''
+                    emotion: d.risk_score || 0
                 }));
 
                 renderReportSections();
-                renderApptPanel();
             } catch (e) {
                 console.error("대시보드 데이터 로드 오류:", e);
             }
@@ -1979,49 +1886,11 @@
         }
 
         function filterAlertList() {
-            const typeFilter   = (document.getElementById('alertTypeFilter')?.value || '').toUpperCase();
-            const statusFilter = (document.getElementById('alertStatusFilter')?.value || '').toUpperCase();
-            const sortBy       = document.getElementById('alertSortBy')?.value || 'score';
-            const searchQ      = (document.getElementById('searchAlert')?.value.trim().toLowerCase()) || '';
-
-            let list = STATE.alerts.filter(a => {
-                if (typeFilter   && (a.type||'').toUpperCase()   !== typeFilter)   return false;
-                if (statusFilter && (a.status||'').toUpperCase() !== statusFilter) return false;
-                if (searchQ) {
-                    const sess = STATE.sessions.find(s => s.id === a.sess_id);
-                    const cn = (sess?.client_name || a.client_name || '').toLowerCase();
-                    if (!String(a.sess_id).includes(searchQ) && !cn.includes(searchQ) && !(a.type||'').toLowerCase().includes(searchQ)) return false;
-                }
-                return true;
-            });
-
-            // 정렬
-            if (sortBy === 'score') list.sort((a,b) => Number(b.score||0) - Number(a.score||0));
-            else list.sort((a,b) => new Date(b.at||0) - new Date(a.at||0));
-
-            const tbody = document.getElementById('table-alerts');
-            if (!tbody) return;
-            if (!list.length) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#aab0be;">조건에 맞는 신호가 없습니다.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = list.map(a => {
-                const sessId = a.sess_id || 0;
-                const session = STATE.sessions.find(s => s.id === sessId);
-                const clientName = a.client_name || session?.client_name || '-';
-                const reportBtn = `<a href="SessionDetail.html?sess_id=${sessId}" target="_blank" style="color:#7389f4;font-size:0.82rem;font-weight:600;">리포트</a>`;
-                const scoreColor = Number(a.score) >= 0.65 ? '#e05252' : Number(a.score) >= 0.4 ? '#f0a500' : '#555';
-                return `<tr>
-                    <td style="font-weight:600;color:#7389f4;cursor:pointer;" onclick="showSessionDetail(${sessId})">${sessId}</td>
-                    <td>${escHtml(clientName)}</td>
-                    <td><code style="font-size:0.75rem;background:#f5f6fa;padding:2px 6px;border-radius:4px;">${escHtml(a.type||'-')}</code></td>
-                    <td style="font-weight:700;color:${scoreColor};">${a.score != null ? Number(a.score).toFixed(2) : '-'}</td>
-                    <td><span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:0.75rem;font-weight:600;${(a.status||'').toUpperCase()==='DETECTED'?'background:#fff3e0;color:#e65100;':'background:#e8f5e9;color:#2e7d32;'}">${a.status||'-'}</span></td>
-                    <td style="font-size:0.82rem;color:#8b92a0;">${formatTime(a.at)}</td>
-                    <td style="font-size:0.8rem;color:#8b92a0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(a.reasonMsg||a.action||'')}">${escHtml((a.reasonMsg||a.action||'-').substring(0,40))}${(a.reasonMsg||a.action||'').length>40?'…':''}</td>
-                    <td>${reportBtn}</td>
-                </tr>`;
-            }).join('');
+            const filtered = getFilteredAlerts();
+            const sortBy = (document.getElementById('alertSortBy') && document.getElementById('alertSortBy').value) || 'date';
+            const sorted = getSortedAlertList(filtered, sortBy);
+            renderAlertTable(sorted);
+            updateAlertFilterInfo(filtered);
         }
 
         function updateAlertFilterInfo(filteredList) {
@@ -2043,182 +1912,43 @@
             const el = (id) => document.getElementById(id);
             if (!el('kpi-sessions')) return;
 
-            // ① KPI 카드 업데이트 (기획 의도 기반)
-            const activeSessions = STATE.sessions.filter(s => s.progress === 'ACTIVE');
-            el('kpi-sessions').textContent = activeSessions.length;
+            // KPI 업데이트
+            const highAlerts = STATE.alerts.filter(a => a.score != null && Number(a.score) >= 0.65);
+            const highAlertSessIds = new Set(highAlerts.map(a => a.sess_id));
 
-            const detectedAlerts = STATE.alerts.filter(a => a.status === 'DETECTED');
-            el('kpi-alerts').textContent = detectedAlerts.length;
+            el('kpi-sessions').textContent = highAlertSessIds.size;
+            el('kpi-alerts').textContent = STATE.alerts.filter(a => a.status === 'DETECTED').length;
 
             const avgScore = STATE.quality.length
                 ? (STATE.quality.reduce((s, q) => s + q.score, 0) / STATE.quality.length).toFixed(1)
                 : '0';
             el('kpi-quality').textContent = avgScore;
+            el('kpi-resolved').textContent = STATE.alerts.filter(a => a.status === 'RESOLVED').length;
 
-            // 주의+개선필요 내담자 수 (client_grade 통계에서 합산)
-            const riskClients = STATE.clientGrade
-                .filter(g => g.client_grade === '주의' || g.client_grade === '개선필요')
-                .reduce((sum, g) => sum + Number(g.total || 0), 0);
-            el('kpi-risk-clients').textContent = riskClients;
-
-            // ② 우선 검토 세션 렌더
-            renderPrioritySessions();
-
-            // 기존 로직 유지
             renderUnresolvedSessions();
             filterAlertList();
 
-            // ③ 차트 1: 일별 품질 추이 (꺾은선)
-            const sortedQ = STATE.quality.slice().sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
-            const qualityChartCfg = {
+            // 차트 업데이트
+            var sortedQuality = STATE.quality.slice().sort((a, b) => a.sess_id - b.sess_id);
+            var flowChartConfig = {
                 type: 'line',
                 data: {
-                    labels: sortedQ.map(q => q.sess_id ? '세션' + q.sess_id : '-'),
+                    labels: sortedQuality.map(q => '세션 ' + q.sess_id),
                     datasets: [
-                        { label: '상담 흐름(flow)', data: sortedQ.map(q => q.flow),  borderColor: '#7389f4', backgroundColor: 'rgba(115,137,244,0.08)', fill: true, tension: 0.35, pointRadius: 3 },
-                        { label: '품질 점수(score)', data: sortedQ.map(q => q.score), borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.08)',    fill: true, tension: 0.35, pointRadius: 3 }
+                        { label: '흐름(flow)', data: sortedQuality.map(q => q.flow), borderColor: '#58a6ff', backgroundColor: 'rgba(88, 166, 255, 0.1)', fill: true, tension: 0.3 },
+                        { label: '품질(score)', data: sortedQuality.map(q => q.score), borderColor: '#3fb950', backgroundColor: 'rgba(63, 185, 80, 0.1)', fill: true, tension: 0.3 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } } }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100, title: { display: false } } }, plugins: { legend: { position: 'top' } } }
             };
+
             if (typeof Chart !== 'undefined') {
-                const c1 = document.getElementById('chart-quality-flow-dropout');
-                if (c1) { if (window._chartQ) window._chartQ.destroy(); window._chartQ = new Chart(c1.getContext('2d'), qualityChartCfg); }
-            }
-
-            // ③ 차트 2: 내담자 등급 분포 (도넛)
-            const gradeData = [
-                STATE.clientGrade.find(g => g.client_grade === '안정')?.total || 0,
-                STATE.clientGrade.find(g => g.client_grade === '주의')?.total || 0,
-                STATE.clientGrade.find(g => g.client_grade === '개선필요')?.total || 0
-            ];
-            const donutCfg = {
-                type: 'doughnut',
-                data: {
-                    labels: ['안정', '주의', '개선필요'],
-                    datasets: [{ data: gradeData, backgroundColor: ['#3fb950','#f0a500','#e05252'], borderWidth: 2 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
-            };
-            if (typeof Chart !== 'undefined') {
-                const c2 = document.getElementById('chart-client-grade');
-                if (c2) { if (window._chartGrade) window._chartGrade.destroy(); window._chartGrade = new Chart(c2.getContext('2d'), donutCfg); }
-            }
-
-            // ③ 차트 3: 토픽별 세션 분포 (막대)
-            const topicLabels = STATE.topicDist.map(t => t.topic_name || t.topic_id || '-');
-            const topicCounts = STATE.topicDist.map(t => Number(t.total || t.count || 0));
-            const topicFallback = topicLabels.length === 0;
-            const barCfg = {
-                type: 'bar',
-                data: {
-                    labels: topicFallback ? ['T0','T1','T2','T3','T4','T5'] : topicLabels,
-                    datasets: [{ label: '세션 수', data: topicFallback ? [0,0,0,0,0,0] : topicCounts,
-                        backgroundColor: ['#7389f4','#58a6ff','#3fb950','#f0a500','#e05252','#a78bfa'],
-                        borderRadius: 6, borderSkipped: false }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-            };
-            if (typeof Chart !== 'undefined') {
-                const c3 = document.getElementById('chart-topic-dist');
-                if (c3) { if (window._chartTopic) window._chartTopic.destroy(); window._chartTopic = new Chart(c3.getContext('2d'), barCfg); }
-            }
-        }
-
-        // ② 우선 검토 세션 렌더 함수
-        function renderPrioritySessions() {
-            const tbody = document.getElementById('table-priority-sessions');
-            if (!tbody) return;
-
-            // alert 기준으로 세션별 최고 신호 강도 집계
-            const sessAlertMap = {};
-            STATE.alerts.filter(a => a.status === 'DETECTED').forEach(a => {
-                const sid = a.sess_id;
-                if (!sessAlertMap[sid] || Number(a.score) > Number(sessAlertMap[sid].score)) {
-                    sessAlertMap[sid] = a;
+                var flowCanvasDropout = document.getElementById('chart-quality-flow-dropout');
+                if (flowCanvasDropout) {
+                    if (window._qualityFlowChartDropout) window._qualityFlowChartDropout.destroy();
+                    window._qualityFlowChartDropout = new Chart(flowCanvasDropout.getContext('2d'), flowChartConfig);
                 }
-            });
-
-            // quality와 합쳐서 우선순위 목록 생성
-            const priorityList = STATE.quality.map(q => ({
-                sess_id: q.sess_id,
-                client_name: q.client_name,
-                client_status: q.client_status,
-                flow: q.flow,
-                score: q.score,
-                max_alert_score: sessAlertMap[q.sess_id] ? Number(sessAlertMap[q.sess_id].score) : 0
-            }));
-
-            // 정렬: 개선필요 > 주의 > 안정, 같은 등급이면 신호 강도 높은 순
-            const gradeOrder = { '개선필요': 0, '주의': 1, '안정': 2 };
-            priorityList.sort((a, b) => {
-                const ga = gradeOrder[a.client_status] ?? 3;
-                const gb = gradeOrder[b.client_status] ?? 3;
-                if (ga !== gb) return ga - gb;
-                return b.max_alert_score - a.max_alert_score;
-            });
-
-            const top10 = priorityList.slice(0, 10);
-            if (!top10.length) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#aab0be;">세션 데이터가 없습니다.</td></tr>';
-                return;
             }
-
-            const gradeBadge = s => {
-                const map = { '안정': 'background:#e8f5e9;color:#2e7d32;', '주의': 'background:#fff3e0;color:#e65100;', '개선필요': 'background:#fce4ec;color:#c62828;' };
-                return `<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;${map[s]||'background:#f0f0f0;color:#888;'}">${s||'-'}</span>`;
-            };
-            const scoreBar = (v, max=100) => {
-                const pct = Math.min(100, Math.round((v/max)*100));
-                const color = v >= 70 ? '#3fb950' : v >= 40 ? '#f0a500' : '#e05252';
-                return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:6px;background:#f0f0f0;border-radius:3px;"><div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div></div><span style="font-size:0.8rem;color:#555;">${Number(v).toFixed(1)}</span></div>`;
-            };
-
-            tbody.innerHTML = top10.map(row => `<tr>
-                <td style="font-weight:600; color:#7389f4; cursor:pointer;" onclick="showSessionDetail(${row.sess_id})">${row.sess_id}</td>
-                <td>${escHtml(row.client_name || '-')}</td>
-                <td>${gradeBadge(row.client_status)}</td>
-                <td><span style="font-weight:700; color:${row.max_alert_score>=0.65?'#e05252':'#555'};">${row.max_alert_score>0?row.max_alert_score.toFixed(2):'-'}</span></td>
-                <td>${scoreBar(row.flow)}</td>
-                <td>${scoreBar(row.score)}</td>
-                <td><a href="SessionDetail.html?sess_id=${row.sess_id}" target="_blank" style="color:#7389f4;font-size:0.82rem;font-weight:600;">리포트</a></td>
-            </tr>`).join('');
-        }
-
-        // 예약 패널 렌더
-        let _apptPage = 1;
-        const _apptRows = 7;
-        function renderApptPanel() {
-            const q = (document.getElementById('apptPanelSearch')?.value.trim().toLowerCase()) || '';
-            const statusFilter = (document.getElementById('apptPanelStatusFilter')?.value) || '';
-            let list = [...(STATE.appts || [])];
-            if (statusFilter) list = list.filter(a => (a.status||'').toUpperCase() === statusFilter);
-            if (q) list = list.filter(a => (a.client_name||'').toLowerCase().includes(q) || String(a.id).includes(q));
-            list.sort((a, b) => new Date(b.at||0) - new Date(a.at||0));
-
-            const tbody = document.getElementById('appt-panel-tbody');
-            if (!tbody) return;
-            const paged = list.slice((_apptPage-1)*_apptRows, _apptPage*_apptRows);
-            if (!paged.length) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#aab0be;">예약 데이터가 없습니다.</td></tr>';
-                return;
-            }
-            const statusMap = { REQUESTED:{cls:'background:#fff3e0;color:#e65100;',label:'접수'}, CONFIRMED:{cls:'background:#e3f2fd;color:#1565c0;',label:'확정'}, COMPLETED:{cls:'background:#e8f5e9;color:#2e7d32;',label:'완료'}, CANCELLED:{cls:'background:#fce4ec;color:#c62828;',label:'취소'} };
-            const formatAt = s => { if(!s) return '-'; const d=new Date(s); return isNaN(d)?s: d.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); };
-            tbody.innerHTML = paged.map(a => {
-                const st = (a.status||'').toUpperCase();
-                const sm = statusMap[st] || {cls:'background:#f0f0f0;color:#888;', label: st};
-                const cName = (STATE.counselors||[]).find(c=>c.id===a.counselor_id)?.name || a.counselor_name || '미배정';
-                const chatBtn = st==='CONFIRMED' ? `<a href="Chat_counselor.html?appt_id=${a.id}&counselor_id=${a.counselor_id}" style="display:inline-block;padding:4px 12px;background:#7389f4;color:#fff;border-radius:6px;font-size:0.78rem;font-weight:600;text-decoration:none;">상담 시작</a>` : '<span style="color:#ccc;font-size:0.8rem;">—</span>';
-                return `<tr>
-                    <td>${a.id}</td>
-                    <td>${escHtml(a.client_name||String(a.client_id||'-'))}</td>
-                    <td>${formatAt(a.at)}</td>
-                    <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;${sm.cls}">${sm.label}</span></td>
-                    <td>${escHtml(cName)}</td>
-                    <td>${chatBtn}</td>
-                </tr>`;
-            }).join('');
         }
 
         // 6. 실시간 팝업 로드 로직 (대화 내용 및 점수 조회)
@@ -2283,24 +2013,6 @@
 
         // 초기화 및 이벤트 리스너
         document.addEventListener('DOMContentLoaded', () => {
-            // 예약 패널 필터 이벤트
-            ['apptPanelSearch','apptPanelStatusFilter'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('change', () => { _apptPage = 1; renderApptPanel(); });
-                    el.addEventListener('input', () => { _apptPage = 1; renderApptPanel(); });
-                }
-            });
-
-            // 사이드바 예약현황 메뉴 → 섹션 스크롤
-            document.querySelectorAll('a[href="Appt.html"]').forEach(a => {
-                a.setAttribute('href', '#appt-panel-section');
-                a.addEventListener('click', e => {
-                    e.preventDefault();
-                    document.getElementById('appt-panel-section')?.scrollIntoView({behavior:'smooth'});
-                });
-            });
-
             const toggleBtn = document.getElementById('sidebarToggle');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function () {
@@ -2326,11 +2038,6 @@
             document.getElementById('searchAlertIcon')?.addEventListener('click', () => searchAlertEl?.focus());
             document.getElementById('alertStageFilter')?.addEventListener('change', filterAlertList);
             document.getElementById('alertSortBy')?.addEventListener('change', filterAlertList);
-            // 신호 유형/상태 필터 이벤트
-            ['alertTypeFilter','alertStatusFilter','alertSortBy'].forEach(id => {
-                document.getElementById(id)?.addEventListener('change', filterAlertList);
-            });
-
             document.getElementById('alertClearFilterBtn')?.addEventListener('click', () => {
                 window._alertTypeFilter = null;
                 document.getElementById('alertListFilterInfo')?.classList.remove('show');

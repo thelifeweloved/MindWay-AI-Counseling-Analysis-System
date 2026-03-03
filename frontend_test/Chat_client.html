@@ -140,8 +140,21 @@
         @media (max-width: 1024px) { .chat-right-panel { width: 280px; } }
         @media (max-width: 768px) { .chat-right-panel { display: none; } .chat-main { border-radius: 0; } }
 
-        /* [신규 기능 전용 스타일 - 추가됨] */
         .chat-msg .bubble img { max-width: 100%; max-height: 300px; border-radius: 8px; margin-top: 8px; display: block; cursor: pointer; }
+        .btn-modal-close {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .btn-modal-close:hover {
+            color: #333;
+        }
     </style>
 </head>
 
@@ -232,14 +245,16 @@
             <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
             <input type="file" id="videoFileInput" accept="video/*" style="display:none;">
 
-            <div class="modal-overlay" id="endSessionModal">
-                <div class="modal-box">
+            <<div class="modal-overlay" id="endSessionModal">
+                <div class="modal-box" style="position: relative;">
+                    <button type="button" class="btn-modal-close" id="endSessionCloseX" title="평가 건너뛰기"><i class="fa-solid fa-xmark"></i></button>
+                    
                     <div class="modal-title">만족도 조사</div>
                     <div class="modal-text">상담 종료시 품질향상을 위해 만족도 조사를 해주세요.</div>
                     <div class="modal-actions">
                         <button type="button" class="btn-satisfy" id="endSessionSatisfy">만족</button>
                         <button type="button" class="btn-dissatisfy" id="endSessionDissatisfy">불만족</button>
-                    </div>
+                        </div>
                 </div>
             </div>
             
@@ -276,41 +291,91 @@
     </div>
 
     <script>
-        
-        const ANALYZE_URL = 'http://127.0.0.1:8001/analyze'; 
-        const clientId = localStorage.getItem('client_id') || 1; 
-        const counselorId = localStorage.getItem('counselor_id') || 1; 
-        const clientName = localStorage.getItem('client_name') || '내담자';
+        const ANALYZE_URL = 'http://127.0.0.1:8001/analyze';
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('client_id') || localStorage.getItem('client_id') || 1;
+        
+        // ★ 오류 해결 1: 캐시를 무시하고 주소창에 넘어온 실제 이름을 최우선으로 낚아챕니다.
+        let clientNameRaw = urlParams.get('client_name') || localStorage.getItem('client_name') || '내담자'; 
+        const clientName = decodeURIComponent(clientNameRaw); // 깨진 글자 복원
+        
         let windowSessId = null;
         let lastMsgCount = 0;
         let isPolling = false;
 
-        document.getElementById('displayClientName').innerText = clientName;
-        document.getElementById('headerClientName').innerText = clientName;
+        // ★ 오류 해결 2: 화면에 진짜 존재하는 ID에만 이름을 안전하게 반영합니다.
+        const displayClientEl = document.getElementById('displayClientName');
+        if (displayClientEl) displayClientEl.innerText = clientName;
 
         const clientEmail = localStorage.getItem('client_email') || '이메일 정보 없음';
         const emailEl = document.getElementById('displayClientEmail');
         if (emailEl) emailEl.innerText = clientEmail;
 
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-        });
-
         async function initSession() {
             try {
-                const res = await fetch(`${API_BASE_URL}/client/start-session`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id: Number(clientId), counselor_id: Number(counselorId) })
-                });
-                const data = await res.json();
-                if (data.sess_id) {
-                    windowSessId = data.sess_id;
-                    document.getElementById('headerSessionId').innerText = `SESS-${data.sess_id} · 상담 진행 중`;
-                    setInterval(fetchMessages, 2000);
+                // 1. 내담자 본인의 예약 목록 조회
+                const apptRes = await fetch(`${API_BASE_URL}/appointments?client_id=${clientId}`);
+                const apptData = await apptRes.json();
+                const myAppts = apptData.items || [];
+                
+                // 2. 현재 활성화된(REQUESTED 또는 CONFIRMED) 예약 찾기
+                const activeAppt = myAppts.find(a => a.status === 'REQUESTED' || a.status === 'CONFIRMED');
+                
+                // 3. 만약 예약이 아예 없다면 -> 자동으로 예약 접수(POST)
+                if (!activeAppt) {
+                    const now = new Date();
+                    const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                    
+                    await fetch(`${API_BASE_URL}/appointments`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            client_id: Number(clientId), 
+                            counselor_id: null, 
+                            at: timeStr 
+                        })
+                    });
+                    
+                    alert("상담 예약이 자동 접수되었습니다. 상담사가 배정될 때까지 대기해주세요.");
+                    document.getElementById('headerSessionId').innerText = "상담사 배정 대기 중...";
+                    
+                    setTimeout(() => location.reload(), 5000);
+                    return;
                 }
-            } catch (e) { console.error("세션 실패"); }
+
+                // 4. 예약이 있지만 아직 상담사가 수락(CONFIRMED)하지 않은 경우 대기
+                if (activeAppt.status === 'REQUESTED') {
+                    document.getElementById('headerSessionId').innerText = "상담사 배정 대기 중...";
+                    setTimeout(() => location.reload(), 5000);
+                    return;
+                }
+
+                // 5. 상담사가 확정(CONFIRMED)한 경우 세션(채팅창) 연결 시작
+                if (activeAppt.status === 'CONFIRMED' && activeAppt.counselor_id) {
+                    const targetCounselorId = activeAppt.counselor_id;
+                    const targetCounselorName = activeAppt.counselor_name || "담당 상담사";
+                    
+                    // ★ 화면 상단 헤더에 상담사 이름 표시 
+                    const headerEl = document.getElementById('headerClientName');
+                    if (headerEl) headerEl.innerText = targetCounselorName;
+
+                    const res = await fetch(`${API_BASE_URL}/client/start-session`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ client_id: Number(clientId), counselor_id: Number(targetCounselorId) })
+                    });
+                    const data = await res.json();
+                    if (data.sess_id) {
+                        windowSessId = data.sess_id;
+                        document.getElementById('headerSessionId').innerText = `SESS-${data.sess_id} · 상담 진행 중`;
+                        setInterval(fetchMessages, 2000);
+                    }
+                }
+            } catch (e) { 
+                console.error("세션 연결 실패:", e);
+                alert("서버 연결에 실패했습니다.");
+            }
         }
 
         function renderMessages(msgs) {
@@ -340,7 +405,7 @@
                 const res = await fetch(`${API_BASE_URL}/sessions/${windowSessId}/messages?limit=100`);
                 const data = await res.json();
                 const msgs = data.items || [];
-                if (msgs.length > lastMsgCount) { renderMessages(msgs.reverse()); lastMsgCount = msgs.length; }
+                if (msgs.length > lastMsgCount) { renderMessages(msgs); lastMsgCount = msgs.length; }
             } catch (e) { } finally { isPolling = false; }
         }
 
@@ -362,7 +427,6 @@
             await postMessage({ sess_id: Number(windowSessId), speaker: 'CLIENT', speaker_id: Number(clientId), text: text, stt_conf: 0.0 });
         }
 
-        // 이미지 버튼 로직
         document.getElementById('btnImage').addEventListener('click', () => document.getElementById('imageFileInput').click());
         document.getElementById('imageFileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -376,12 +440,14 @@
             }
         });
 
-        // 영상 로직 (통합 모달 적용)
+        let ws = null;
+        let videoFileObjectUrl = null;
+        let analysisTimer = null;
+
         const btnVideo = document.getElementById('btnVideo');
         const recordingModal = document.getElementById('recordingConsentModal');
         const sourceModal = document.getElementById('videoSourceModal');
         const localVideo = document.getElementById('localVideo');
-        let analysisTimer = null;
 
         btnVideo.addEventListener('click', () => {
             if (btnVideo.classList.contains('on')) stopVideo();
@@ -396,6 +462,11 @@
         document.getElementById('btnSelectWebcam').addEventListener('click', () => {
             sourceModal.classList.remove('show');
             navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                if (videoFileObjectUrl) {
+                    URL.revokeObjectURL(videoFileObjectUrl);
+                    videoFileObjectUrl = null;
+                }
+                localVideo.src = '';
                 localVideo.srcObject = stream;
                 onVideoStart();
             });
@@ -408,48 +479,134 @@
 
         document.getElementById('videoFileInput').addEventListener('change', function() {
             if (this.files[0]) {
-                localVideo.src = URL.createObjectURL(this.files[0]);
+                if (videoFileObjectUrl) {
+                    URL.revokeObjectURL(videoFileObjectUrl);
+                }
+                videoFileObjectUrl = URL.createObjectURL(this.files[0]);
+                localVideo.src = videoFileObjectUrl;
                 localVideo.loop = true;
                 onVideoStart();
             }
+            this.value = ''; 
         });
 
         function onVideoStart() {
             localVideo.style.display = 'block';
             document.getElementById('videoPlaceholder').style.display = 'none';
             btnVideo.classList.add('on');
-            analysisTimer = setInterval(analyzeFrame, 1000);
+            
+            localVideo.play().catch(() => {});
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`ws://127.0.0.1:8001/ws/analyze/${windowSessId}`);
+
+            ws.onerror = (error) => console.error("WebSocket 오류:", error);
+
+            analysisTimer = setInterval(analyzeFrame, 500);
         }
 
         function stopVideo() {
+            if (videoFileObjectUrl) {
+                URL.revokeObjectURL(videoFileObjectUrl);
+                videoFileObjectUrl = null;
+            }
+            
             if (localVideo.srcObject) localVideo.srcObject.getTracks().forEach(t => t.stop());
-            localVideo.srcObject = null; localVideo.src = '';
+            localVideo.srcObject = null; 
+            localVideo.src = '';
             localVideo.style.display = 'none';
             document.getElementById('videoPlaceholder').style.display = 'flex';
             btnVideo.classList.remove('on');
-            clearInterval(analysisTimer);
+            
+            if (analysisTimer) clearInterval(analysisTimer);
+            
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
         }
 
         async function analyzeFrame() {
-            if (!windowSessId || localVideo.style.display === 'none') return;
-            const canvas = document.createElement('canvas');
-            canvas.width = 320; canvas.height = 240;
-            canvas.getContext('2d').drawImage(localVideo, 0, 0, 320, 240);
-            const b64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-            try {
-                fetch(ANALYZE_URL, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: String(windowSessId), image_base64: 'data:image/jpeg;base64,' + b64, sess_db_id: windowSessId })
-                });
-            } catch (e) {}
-        }
+            if (!windowSessId || localVideo.style.display === 'none' || !ws || ws.readyState !== WebSocket.OPEN) return;
+            if (localVideo.readyState < 2) return; 
 
+            const canvas = document.createElement('canvas');
+            canvas.width = 320; 
+            canvas.height = 240;
+            canvas.getContext('2d').drawImage(localVideo, 0, 0, 320, 240);
+            
+            const b64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+            
+            try {
+                const payload = {
+                    session_id: String(windowSessId),
+                    image_base64: 'data:image/jpeg;base64,' + b64,
+                    sess_db_id: windowSessId
+                };
+                ws.send(JSON.stringify(payload)); 
+            } catch (e) {
+                console.error("Frame send error:", e);
+            }
+        }
+        
         document.getElementById('btnSend').addEventListener('click', sendMessage);
         document.getElementById('messageInput').addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
         document.getElementById('btnVideoEnd').addEventListener('click', stopVideo);
-        document.querySelector('.btn-end-session').addEventListener('click', () => document.getElementById('endSessionModal').classList.add('show'));
-        document.getElementById('endSessionSatisfy').addEventListener('click', () => { document.getElementById('endSessionModal').classList.remove('show'); document.getElementById('thankYouModal').classList.add('show'); });
-        document.getElementById('thankYouSaveConfirm').addEventListener('click', () => location.href = 'Login.html');
+
+        // --- 수정된 만족도 조사 로직 적용 ---
+        let currentSatScore = null;
+
+        // 종료 버튼 클릭 시 모달 띄우기
+        document.querySelector('.btn-end-session').addEventListener('click', () => {
+            document.getElementById('endSessionModal').classList.add('show');
+        });
+
+        // 만족/불만족 선택 시 한줄평 창으로 전환
+        document.getElementById('endSessionSatisfy').addEventListener('click', () => { 
+            currentSatScore = 1; 
+            document.getElementById('endSessionModal').classList.remove('show'); 
+            document.getElementById('thankYouModal').classList.add('show'); 
+        });
+
+        document.getElementById('endSessionDissatisfy').addEventListener('click', () => { 
+            currentSatScore = 0; 
+            document.getElementById('endSessionModal').classList.remove('show'); 
+            document.getElementById('thankYouModal').classList.add('show'); 
+        });
+
+        // 서버 전송 및 종료 통합 함수
+        async function closeSessionAndLeave(satScore, satNote) {
+            if(!windowSessId) {
+                location.href = 'Login.html';
+                return;
+            }
+            try {
+                await fetch(`${API_BASE_URL}/sessions/${windowSessId}/close`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        end_reason: 'NORMAL', 
+                        sat: satScore, 
+                        sat_note: satNote 
+                    })
+                });
+            } catch (e) {
+                console.error("종료 처리 실패", e);
+            } finally {
+                location.href = 'Login.html';
+            }
+        }
+
+        // (수정 후) X 버튼 클릭 시 평가 없이 종료 처리
+        document.getElementById('endSessionCloseX').addEventListener('click', () => {
+            closeSessionAndLeave(null, null);
+        });
+
+        // 한줄평 저장 및 확인 버튼 클릭 시 (데이터베이스 전송)
+        document.getElementById('thankYouSaveConfirm').addEventListener('click', () => {
+            const noteText = document.getElementById('thankYouOneLine').value.trim();
+            closeSessionAndLeave(currentSatScore, noteText || null);
+        });
 
         document.addEventListener("DOMContentLoaded", initSession);
     </script>

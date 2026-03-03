@@ -488,7 +488,7 @@
                     const statusSelect = `<select class="status-select ${statusCss}" data-appt-id="${a.id}" title="예약상태" disabled>${statusOpts}</select><span class="dropdown-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>`;
                     const statusCell = `<div class="cell-edit-wrap"><div class="select-wrap">${statusSelect}</div><button type="button" class="btn-edit-cell" title="변경"><i class="fa-solid fa-pen-to-square"></i></button></div>`;
 
-                    const timeCell = `<div class="cell-time"><span>${a.at || '-'}</span>${status === 'CONFIRMED' ? `<a href="Chat_counselor.html?appt_id=${a.id}&counselor_id=${a.counselor_id}" class="btn-start-chat" title="상담 시작">상담시작</a>` : ''}</div>`;
+                    const timeCell = `<div class="cell-time"><span>${a.at || '-'}</span>${status === 'CONFIRMED' ? `<a href="Chat_counselor.html?appt_id=${a.id}&counselor_id=${a.counselor_id}&client_id=${a.client_id}" class="btn-start-chat" title="상담 시작">상담시작</a>` : ''}</div>`;
 
                     return `<tr><td>${a.id}</td><td>${a.client_name || a.client_id || '-'}</td><td>${counselorCell}</td><td>${timeCell}</td><td>${statusCell}</td><td>${a.created_at || '-'}</td></tr>`;
                 }).join('');
@@ -524,7 +524,7 @@
             const counselorNameEl = document.getElementById('counselorName');
             const counselorEmailEl = document.querySelector('.user-email');
             
-
+            // 처음 화면을 켤 때 1번 실행
             loadInitialData();
 
             document.getElementById('searchAppt')?.addEventListener('input', filterAndRender);

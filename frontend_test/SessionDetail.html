@@ -6,6 +6,7 @@
     <title>세션 리포트 - MindWay</title>
     
     <script src="./config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -351,6 +352,22 @@
                 console.error("의견 저장 오류:", error);
                 alert('서버 연결에 실패했습니다.');
             }
+        });
+
+        document.getElementById('btnDownload').addEventListener('click', function() {
+            // 버튼이 포함된 action-bar를 제외하고 리포트 내용만 담기 위해 범위를 조정할 수도 있지만,
+            // 사용자님의 기존 방식대로 reportContent 전체를 캡처합니다.
+            const element = document.getElementById('reportContent'); 
+            const opt = {
+                margin:       10,
+                filename:     `MindWay_Report_S${sessId}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, 
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // 라이브러리 실행
+            html2pdf().set(opt).from(element).save();
         });
 
         // 인쇄 기능
