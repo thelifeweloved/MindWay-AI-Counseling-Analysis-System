@@ -332,7 +332,7 @@
 
     <script>
         // ★ 파일 전용 독립 API 경로 설정 유지
-        const ANALYZE_URL = 'http://127.0.0.1:8001/analyze';
+        const ANALYZE_URL = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000') + '/analyze';
 
         const clientId = localStorage.getItem('client_id') || 1;
         const counselorId = localStorage.getItem('counselor_id') || 1;
@@ -446,7 +446,7 @@
                     chatPollId = setInterval(fetchMessages, 2000);
 
                     if (statusPollId) clearInterval(statusPollId);
-                    statusPollId = setInterval(pollSessionStatus, 1500);
+                    statusPollId = setInterval(pollSessionStatus, 1000);
                 }
             } catch (e) { console.error("세션 연결 실패:", e); }
         }
@@ -803,7 +803,7 @@
                 btnVideo.classList.add('on');
 
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                ws = new WebSocket(`${protocol}//127.0.0.1:8001/ws/analyze/${window._mwSessId}`);
+                const _wsHost = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000').replace(/^https?:\/\//, ''); ws = new WebSocket(`${protocol}//${_wsHost}/ws/analyze/${window._mwSessId}`);
 
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
@@ -842,7 +842,7 @@
             localVideo.onloadeddata = function () {
                 localVideo.play().catch(() => {});
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                ws = new WebSocket(`${protocol}//127.0.0.1:8001/ws/analyze/${window._mwSessId}`);
+                const _wsHost = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000').replace(/^https?:\/\//, ''); ws = new WebSocket(`${protocol}//${_wsHost}/ws/analyze/${window._mwSessId}`);
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
                     if (data.status === 'success') {

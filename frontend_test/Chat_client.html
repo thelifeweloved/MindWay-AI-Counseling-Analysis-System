@@ -312,7 +312,7 @@
         /* [중요] config.js에서 정의된 API_BASE_URL을 사용합니다. 
            만약 ReferenceError가 발생한다면 config.js 로드 여부를 확인하세요. */
         
-        const ANALYZE_URL = 'http://127.0.0.1:8001/analyze'; 
+        const ANALYZE_URL = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000') + '/analyze';
         const clientId = localStorage.getItem('client_id') || 1; 
         const counselorId = localStorage.getItem('counselor_id') || 1; 
         const clientName = localStorage.getItem('client_name') || '내담자';
@@ -348,7 +348,6 @@
                     document.getElementById('headerSessionId').innerText = `SESS-${data.sess_id} · 상담 진행 중`;
                     setInterval(fetchMessages, 2000);
                     startHeartbeat();  // heartbeat 시작
-                    loadAndShowTopicModal(); // 고민 유형 선택 모달 표시
                 }
             } catch (e) { console.error("세션 실패:", e); }
         }
@@ -585,11 +584,17 @@
 
 
         // ── 고민 유형 선택 모달 로직 ──
+        // ── 고민 유형 선택 모달 로직 ──
         let _topicList = [];          // DB에서 불러온 전체 topic 목록
         let _selectedTopics = [];     // 선택된 topic id 배열
         let _etcTopicId = null;       // '기타' topic의 id (있으면)
 
         async function loadAndShowTopicModal() {
+            // 모달 즉시 표시 (로딩 상태)
+            document.getElementById('topicSelectModal').classList.add('show');
+            const grid = document.getElementById('topicSelectGrid');
+            grid.innerHTML = '<div style="color:#aaa;font-size:0.9rem;padding:12px;">목록 불러오는 중...</div>';
+
             const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
             try {
                 const res = await fetch(`${baseUrl}/topics`);
@@ -600,7 +605,6 @@
                 _topicList = [];
             }
             renderTopicGrid();
-            document.getElementById('topicSelectModal').classList.add('show');
         }
 
         function renderTopicGrid() {
@@ -622,14 +626,12 @@
             const id = topic.id;
             const isEtc = (topic.code || '').toUpperCase() === 'ETC' || topic.name === '기타';
             if (chip.classList.contains('selected')) {
-                // 선택 해제
                 chip.classList.remove('selected');
                 _selectedTopics = _selectedTopics.filter(t => t !== id);
                 if (isEtc) _etcTopicId = null;
             } else {
-                if (_selectedTopics.length >= 3) return; // 최대 3개
+                if (_selectedTopics.length >= 3) return;
                 if (isEtc) {
-                    // 기타 선택 시 입력 모달 열기
                     _etcTopicId = id;
                     document.getElementById('topicEtcModal').classList.add('show');
                     return;
@@ -644,7 +646,6 @@
             const cnt = _selectedTopics.length;
             document.getElementById('topicSelectedCount').textContent = `${cnt}개 선택됨 (최대 3개)`;
             document.getElementById('topicModalComplete').disabled = cnt === 0;
-            // 최대 3개 도달 시 미선택 chip 비활성
             document.querySelectorAll('.topic-chip:not(.selected)').forEach(c => {
                 c.classList.toggle('disabled', cnt >= 3);
             });
@@ -656,7 +657,6 @@
             if (!val) { alert('내용을 입력해주세요.'); return; }
             if (_etcTopicId && !_selectedTopics.includes(_etcTopicId)) {
                 _selectedTopics.push(_etcTopicId);
-                // grid에서 기타 chip 선택 표시
                 const etcChip = document.querySelector(`.topic-chip[data-id="${_etcTopicId}"]`);
                 if (etcChip) etcChip.classList.add('selected');
             }
@@ -664,9 +664,9 @@
             updateTopicUI();
         });
         document.getElementById('topicEtcCancel').addEventListener('click', () => {
+            document.getElementById('topicEtcModal').classList.remove('show');
             _etcTopicId = null;
             document.getElementById('topicEtcInput').value = '';
-            document.getElementById('topicEtcModal').classList.remove('show');
         });
 
         // 닫기 버튼 (건너뛰기)
@@ -678,19 +678,26 @@
         document.getElementById('topicModalComplete').addEventListener('click', async () => {
             if (_selectedTopics.length === 0) return;
             const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+            const client = clientId ? Number(clientId) : 1;
+            const topicPayload = _selectedTopics.map((topicId, index) =>
+                ({ client_id: client, topic_id: topicId, prio: index + 1 })
+            );
             try {
-                await fetch(`${baseUrl}/sessions/${windowSessId}/topics`, {
+                await fetch(`${baseUrl}/client-topics`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic_ids: _selectedTopics })
+                    body: JSON.stringify(topicPayload)
                 });
             } catch (e) {
-                console.error('topic 저장 실패:', e);
+                console.warn('client-topics 전송 실패', e);
             }
             document.getElementById('topicSelectModal').classList.remove('show');
         });
 
-        document.addEventListener("DOMContentLoaded", initSession);
+        document.addEventListener("DOMContentLoaded", () => {
+            loadAndShowTopicModal(); // 페이지 열자마자 고민 유형 모달 표시
+            initSession();           // 세션 생성 병렬 진행
+        });
     </script>
 </body>
 </html>

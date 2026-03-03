@@ -1,6 +1,6 @@
 import os
 import json
-from fastapi import Request, FastAPI, Depends, HTTPException, Query
+from fastapi import Request, FastAPI, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional, List, Dict, Any
@@ -12,11 +12,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import uuid
 import hashlib
+import asyncio
 from db import get_db
 from routers.helper import router as helper_router
 from routers.api import api_router
+from routers.deepface import analyze_face_logic
 # from routers.analysis_services.runner import run_core_features
 # from routers.analysis_services.clova_client import ClovaXClient
+from routers.analysis.runner import run_core_features
+from routers.analysis.clova_client import ClovaXClient
 
 load_dotenv()
 app = FastAPI(title="Mindway Post-Analysis API", version="1.1.2")
@@ -79,20 +83,12 @@ class FaceSaveRequest(BaseModel):
 
 class ConsentRequest(BaseModel):
     ok_text:  Optional[bool] = None
-    ok_voice: Optional[bool] = None
     ok_face:  Optional[bool] = None
 
 class QualityCreate(BaseModel):
     flow:  float = Field(..., ge=0.0, le=100.0)
     score: float = Field(..., ge=0.0, le=100.0)
 
-class SttCreate(BaseModel):
-    sess_id: int   = Field(..., ge=1)
-    speaker: str   = Field(..., pattern="^(COUNSELOR|CLIENT)$")
-    s_ms:    int   = Field(..., ge=0)
-    e_ms:    int   = Field(..., ge=0)
-    text:    str
-    conf:    float = Field(0.0, ge=0.0, le=1.0)
 
 class SessionCloseRequest(BaseModel):
     end_reason: str  = Field("NORMAL", pattern="^(NORMAL|DROPOUT|TECH|UNKNOWN)$")
@@ -494,6 +490,36 @@ def save_session_topics(sess_id: int, payload: dict, db: Session = Depends(get_d
     db.commit()
     return {"ok": True, "saved_topic_ids": topic_ids}
 
+@app.post("/client-topics")
+def save_client_topics(payload: List[dict], db: Session = Depends(get_db)):
+    """내담자가 선택한 고민 유형을 client_topic 테이블에 저장
+    payload: [{ client_id, topic_id, prio }]
+    """
+    if not payload:
+        raise HTTPException(status_code=400, detail="payload가 비어있습니다.")
+    for item in payload:
+        client_id = item.get("client_id")
+        topic_id  = item.get("topic_id")
+        prio      = item.get("prio", 1)
+        if not client_id or not topic_id:
+            continue
+        exists = db.execute(
+            text("SELECT id FROM client_topic WHERE client_id = :cid AND topic_id = :tid"),
+            {"cid": client_id, "tid": topic_id}
+        ).fetchone()
+        if exists:
+            db.execute(
+                text("UPDATE client_topic SET prio = :prio WHERE client_id = :cid AND topic_id = :tid"),
+                {"prio": prio, "cid": client_id, "tid": topic_id}
+            )
+        else:
+            db.execute(
+                text("INSERT INTO client_topic (client_id, topic_id, prio) VALUES (:cid, :tid, :prio)"),
+                {"cid": client_id, "tid": topic_id, "prio": prio}
+            )
+    db.commit()
+    return {"ok": True}
+
 # ---------------------------------------------------------
 # Stats APIs
 # ---------------------------------------------------------
@@ -603,9 +629,9 @@ def update_consent(sess_id: int, payload: ConsentRequest, db: Session = Depends(
 
 @app.get("/sessions/{sess_id}/consent")
 def get_consent(sess_id: int, db: Session = Depends(get_db)):
-    row = db.execute(text("SELECT ok_text, ok_voice, ok_face FROM sess WHERE id = :sid"), {"sid": sess_id}).mappings().first()
+    row = db.execute(text("SELECT ok_text, ok_face FROM sess WHERE id = :sid"), {"sid": sess_id}).mappings().first()
     if not row: raise HTTPException(status_code=404, detail="세션 없음")
-    return {"ok_text": bool(row["ok_text"]), "ok_voice": bool(row["ok_voice"]), "ok_face": bool(row["ok_face"])}
+    return {"ok_text": bool(row["ok_text"]), "ok_face": bool(row["ok_face"])}
 
 @app.get("/stats/recent-alerts")
 def recent_alerts(counselor_id: int = Query(..., ge=1), db: Session = Depends(get_db)):
@@ -653,21 +679,6 @@ def save_quality(sess_id: int, payload: QualityCreate, db: Session = Depends(get
             INSERT INTO quality (sess_id, flow, score) VALUES (:sid, :flow, :score)
             ON DUPLICATE KEY UPDATE flow = :flow, score = :score
         """), {"sid": sess_id, "flow": payload.flow, "score": payload.score})
-        db.commit()
-        return {"status": "saved"}
-    except Exception as e:
-        db.rollback(); raise HTTPException(status_code=400, detail=str(e))
-
-@app.post("/stt")
-def create_stt(payload: SttCreate, db: Session = Depends(get_db)):
-    try:
-        ok = db.execute(text("SELECT ok_voice FROM sess WHERE id = :sid"), {"sid": payload.sess_id}).scalar()
-        if not ok: return {"status": "skipped"}
-
-        db.execute(text("""
-            INSERT INTO stt (sess_id, speaker, s_ms, e_ms, text, conf, meta)
-            VALUES (:sid, :speaker, :s_ms, :e_ms, :text, :conf, :meta)
-        """), {**payload.dict(), "sid": payload.sess_id, "meta": json.dumps({"engine": "WebSpeechAPI"})})
         db.commit()
         return {"status": "saved"}
     except Exception as e:
@@ -767,23 +778,19 @@ async def close_session(sess_id: int, request: Request, db: Session = Depends(ge
 
         db.commit()
 
-        # try:
-        #     clova = ClovaXClient(
-        #         api_key=os.getenv("CLOVA_API_KEY", ""),
-        #         endpoint_id=os.getenv("CLOVA_ENDPOINT_ID", ""),
-        #     )
-        #     run_core_features(
-        #         clova,
-        #         sess_id=sess_id,
-        #         topic_id=1,
-        #         host=os.getenv("DB_HOST", "localhost"),
-        #         port=int(os.getenv("DB_PORT", 3307)),
-        #         user=os.getenv("DB_USER", ""),
-        #         password=os.getenv("DB_PASSWORD", ""),
-        #         database=os.getenv("DB_NAME", ""),
-        #     )
-        # except Exception as e_run:
-        #     print(f"[runner 트리거 실패] {e_run}")
+        # ── AI 분석 파이프라인 (세션 종료 후 자동 실행) ──
+        try:
+            clova = ClovaXClient(
+                api_key=os.getenv("CLOVA_API_KEY", ""),
+                endpoint_id=os.getenv("CLOVA_ENDPOINT_ID", ""),
+            )
+            run_core_features(
+                clova,
+                sess_id=sess_id,
+                db=db,
+            )
+        except Exception as e_run:
+            print(f"[runner 트리거 실패] {e_run}")
 
         return {"status": "closed", "sess_id": sess_id, "end_reason": payload.end_reason}
 
@@ -791,6 +798,101 @@ async def close_session(sess_id: int, request: Request, db: Session = Depends(ge
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
+# ---------------------------------------------------------
+# DeepFace 표정 분석 (deepface_main.py 통합 - 포트 8001 제거)
+# ---------------------------------------------------------
+_face_prev_scores: dict = {}
+FACE_CHANGE_THRESHOLD = 0.2
+
+@app.websocket("/ws/analyze/{session_id}")
+async def websocket_analyze(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    print(f"[{session_id}] 웹소켓 연결 성공")
+    try:
+        while True:
+            data_str = await websocket.receive_text()
+            request_data = json.loads(data_str)
+            image_base64 = request_data.get("image_base64")
+            sess_db_id   = request_data.get("sess_db_id")
+            if not image_base64:
+                continue
+
+            result = await asyncio.to_thread(analyze_face_logic, session_id, image_base64)
+
+            if result.get("status") == "success" and sess_db_id:
+                dominant = result["dominant"]
+                score    = result["scores"].get(dominant, 0.0)
+                prev     = _face_prev_scores.get(session_id)
+
+                if prev is None or abs(score - prev) >= FACE_CHANGE_THRESHOLD:
+                    try:
+                        import httpx
+                        async with httpx.AsyncClient() as client:
+                            await client.post(
+                                "http://127.0.0.1:8000/face/save",
+                                json={
+                                    "sess_id": int(sess_db_id),
+                                    "label":   dominant,
+                                    "score":   round(score, 2),
+                                    "dist":    result["scores"]
+                                },
+                                timeout=3
+                            )
+                    except Exception as e:
+                        print(f"[{session_id}] face 저장 실패: {e}")
+                _face_prev_scores[session_id] = score
+
+            await websocket.send_text(json.dumps(result))
+
+    except WebSocketDisconnect:
+        print(f"[{session_id}] 웹소켓 연결 종료")
+        _face_prev_scores.pop(session_id, None)
+    except Exception as e:
+        print(f"[{session_id}] 웹소켓 에러: {e}")
+        _face_prev_scores.pop(session_id, None)
+
+
+class AnalyzeRequest(BaseModel):
+    session_id:   str
+    image_base64: str
+    sess_db_id:   Optional[int] = None
+
+@app.post("/analyze")
+async def http_analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
+    """Chat_client.html의 ANALYZE_URL 대체 (HTTP POST 방식)"""
+    result = await asyncio.to_thread(analyze_face_logic, payload.session_id, payload.image_base64)
+
+    if result.get("status") == "success" and payload.sess_db_id:
+        dominant = result["dominant"]
+        score    = result["scores"].get(dominant, 0.0)
+        prev     = _face_prev_scores.get(payload.session_id)
+
+        if prev is None or abs(score - prev) >= FACE_CHANGE_THRESHOLD:
+            try:
+                ok = db.execute(
+                    text("SELECT ok_face FROM sess WHERE id = :sid"),
+                    {"sid": payload.sess_db_id}
+                ).scalar()
+                if ok:
+                    db.execute(text("""
+                        INSERT INTO face (sess_id, at, label, score, dist, meta)
+                        VALUES (:sess_id, NOW(), :label, :score, :dist, :meta)
+                    """), {
+                        "sess_id": payload.sess_db_id,
+                        "label":   dominant,
+                        "score":   round(score, 2),
+                        "dist":    json.dumps(result["scores"]),
+                        "meta":    json.dumps({"engine": "deepface", "version": "0.4"})
+                    })
+                    db.commit()
+            except Exception as e:
+                db.rollback()
+                print(f"face DB 저장 실패: {e}")
+        _face_prev_scores[payload.session_id] = score
+
+    return result
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

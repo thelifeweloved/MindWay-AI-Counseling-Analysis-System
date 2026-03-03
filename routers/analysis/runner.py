@@ -130,8 +130,8 @@ def insert_alert_rows(db: Session, alert_rows: List[Dict[str, Any]]) -> None:
             "status": str(r.get("status", "DETECTED")),
             "score": float(r.get("score", 0.0)),
             "rule": str(r.get("rule", "LOW")),
-            # ✅ action: NOT NULL 컬럼 대비 빈 문자열로 저장
-            "action": str(r.get("action", "")),
+            # action은 NULL 허용 컬럼 → 값 없으면 None(NULL) 저장
+            "action": r.get("action") or None,
         }
 
         if has_at:
