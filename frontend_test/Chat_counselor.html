@@ -923,17 +923,17 @@
             });
         }
 
-        // ✅ 내담자 종료 모달 확인 → 대시보드 이동
+        //  내담자 종료 모달 확인 → 대시보드 이동
         document.getElementById('clientEndedConfirm').addEventListener('click', () => {
             document.getElementById('clientEndedModal').classList.remove('show');
-            location.href = '이안_Main.html';
+            location.href = 'Main.html';
         });
 
         // 상단 종료 버튼 클릭
         document.querySelector('.btn-end-session').addEventListener('click', () => {
-            // ✅ 이미 내담자 종료면 바로 이동 (원하는 UX)
+            //  이미 내담자 종료면 바로 이동 (원하는 UX)
             if (clientEndedShown) {
-                location.href = '이안_Main.html';
+                location.href = 'Main.html';
                 return;
             }
             const endModal = document.getElementById('endSessionModal');
@@ -953,7 +953,7 @@
                         body: JSON.stringify({ end_reason: 'NORMAL', sat: 1 })
                     });
                     alert('상담이 종료되었습니다.');
-                    location.href = '이안_Main.html';
+                    location.href = 'Main.html';
                 } catch(e) { alert('오류 발생'); }
             }
         });
