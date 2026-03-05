@@ -528,22 +528,35 @@ def get_counselors(db: Session = Depends(get_db)):
 
 @app.post("/appt")
 def create_appt(payload: dict, db: Session = Depends(get_db)):
-    """
-    내담자가 상담사·날짜·시간 선택 후 예약 생성.
-    A안: 접수 없이 바로 CONFIRMED 저장 → 상담사 대시보드에 즉시 확정 상태로 표시.
-    """
     cid  = payload.get("client_id")
     coid = payload.get("counselor_id")
     at   = payload.get("at")
     if not (cid and coid and at):
         raise HTTPException(status_code=400, detail="client_id, counselor_id, at 필수")
 
-    res = db.execute(text("""
-        INSERT INTO appt (client_id, counselor_id, at, status)
-        VALUES (:cid, :coid, :at, 'CONFIRMED')
-    """), {"cid": cid, "coid": coid, "at": at})
-    db.commit()
-    return {"ok": True, "appt_id": res.lastrowid}
+    # ── 중복 체크 ──
+    existing = db.execute(text("""
+        SELECT id FROM appt
+        WHERE client_id    = :cid
+          AND counselor_id = :coid
+          AND at           = :at
+          AND status NOT IN ('CANCELLED')
+        LIMIT 1
+    """), {"cid": cid, "coid": coid, "at": at}).scalar()
+
+    if existing:
+        return {"ok": True, "appt_id": existing, "duplicate": True}
+
+    try:
+        res = db.execute(text("""
+            INSERT INTO appt (client_id, counselor_id, at, status)
+            VALUES (:cid, :coid, :at, 'CONFIRMED')
+        """), {"cid": cid, "coid": coid, "at": at})
+        db.commit()
+        return {"ok": True, "appt_id": res.lastrowid}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.patch("/appointments/{appt_id}")
 def update_appointment(appt_id: int, payload: ApptUpdateRequest, db: Session = Depends(get_db)):

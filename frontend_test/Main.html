@@ -2394,8 +2394,20 @@
             const q = (document.getElementById('apptPanelSearch')?.value.trim().toLowerCase()) || '';
             const statusFilter = (document.getElementById('apptPanelStatusFilter')?.value) || '';
             let list = [...(STATE.appts || [])];
-            if (statusFilter) list = list.filter(a => (a.status||'').toUpperCase() === statusFilter);
+
+            // 기본: COMPLETED·CANCELLED 숨김 (필터 선택 시엔 해당 상태만 표시)
+            if (statusFilter) {
+                list = list.filter(a => (a.status||'').toUpperCase() === statusFilter);
+            } else {
+                list = list.filter(a => {
+                    const st = (a.status||'').toUpperCase();
+                    return st === 'REQUESTED' || st === 'CONFIRMED';
+                });
+            }
+
             if (q) list = list.filter(a => (a.client_name||'').toLowerCase().includes(q) || String(a.id).includes(q));
+
+            // 정렬: 예약 시각 기준 최신순
             list.sort((a, b) => new Date(b.at||0) - new Date(a.at||0));
 
             const tbody = document.getElementById('appt-panel-tbody');
@@ -2405,28 +2417,21 @@
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#aab0be;">예약 데이터가 없습니다.</td></tr>';
                 return;
             }
+
             const statusMap = { REQUESTED:{cls:'background:#fff3e0;color:#e65100;',label:'접수'}, CONFIRMED:{cls:'background:#e3f2fd;color:#1565c0;',label:'확정'}, COMPLETED:{cls:'background:#e8f5e9;color:#2e7d32;',label:'완료'}, CANCELLED:{cls:'background:#fce4ec;color:#c62828;',label:'취소'} };
             const formatAt = s => { if(!s) return '-'; const d=new Date(s); return isNaN(d)?s: d.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); };
+
             tbody.innerHTML = paged.map(a => {
                 const st = (a.status||'').toUpperCase();
                 const sm = statusMap[st] || {cls:'background:#f0f0f0;color:#888;', label: st};
                 const cName = (STATE.counselors||[]).find(c=>c.id===a.counselor_id)?.name || a.counselor_name || '미배정';
-                // 예약 시간 30분 전부터 "상담 시작" 활성화
+
                 let chatBtn = '<span style="color:#ccc;font-size:0.8rem;">—</span>';
                 if (st === 'CONFIRMED') {
-                    const apptTime = new Date(a.at);
-                    const now = new Date();
-                    const diffMin = (apptTime - now) / 60000; // 양수 = 아직 안 됨
-                    if (diffMin <= 30) {
-                        // 예약 30분 전 ~ 이후: 상담 시작 가능
-                        chatBtn = `<a href="Chat_counselor.html?appt_id=${a.id}&counselor_id=${a.counselor_id}" style="display:inline-block;padding:4px 12px;background:#7389f4;color:#fff;border-radius:6px;font-size:0.78rem;font-weight:600;text-decoration:none;">상담 시작</a>`;
-                    } else {
-                        // 아직 시간 안 됨: 예약 시간 표시
-                        const hm = apptTime.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-                        const md = apptTime.toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'});
-                        chatBtn = `<span style="color:#7389f4;font-size:0.78rem;font-weight:600;">${md} ${hm}</span>`;
-                    }
+                    // 테스트용: 항상 상담 시작 가능 (배포 시 diffMin <= 30 으로 복원)
+                    chatBtn = `<a href="Chat_counselor.html?appt_id=${a.id}&counselor_id=${a.counselor_id}" style="display:inline-block;padding:4px 12px;background:#7389f4;color:#fff;border-radius:6px;font-size:0.78rem;font-weight:600;text-decoration:none;">상담 시작</a>`;
                 }
+
                 return `<tr>
                     <td>${a.id}</td>
                     <td>${escHtml(a.client_name||String(a.client_id||'-'))}</td>
@@ -2437,7 +2442,7 @@
                 </tr>`;
             }).join('');
         }
-
+        
         // 6. 실시간 팝업 로드 로직 (대화 내용 및 점수 조회)
         async function openSessionScorePopup(sessId) {
             const overlay = document.getElementById('sessionScorePopupOverlay');
