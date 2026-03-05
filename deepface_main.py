@@ -17,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-MAIN_API = "http://127.0.0.1:8000/face/save"
+MAIN_API = "http://127.0.0.1:8001/face/save"
 
 prev_scores: dict = {}
 CHANGE_THRESHOLD = 0.2  # 이 이상 변화할 때만 DB 저장

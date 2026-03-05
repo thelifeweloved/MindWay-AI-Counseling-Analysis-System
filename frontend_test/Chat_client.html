@@ -312,7 +312,7 @@
         /* [중요] config.js에서 정의된 API_BASE_URL을 사용합니다. 
            만약 ReferenceError가 발생한다면 config.js 로드 여부를 확인하세요. */
         
-        const ANALYZE_URL = 'http://127.0.0.1:8001/analyze'; 
+        const ANALYZE_URL = `http://${window.location.hostname}:8001/analyze`;
         const clientId = localStorage.getItem('client_id') || 1; 
         const counselorId = localStorage.getItem('counselor_id') || 1; 
         const clientName = localStorage.getItem('client_name') || '내담자';
@@ -350,7 +350,9 @@
 
             // --- 아래는 기존 로직 그대로 유지 ---
             // [체크] API_BASE_URL이 존재하지 않을 경우를 대비한 안전장치
-            const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+            const baseUrl = typeof API_BASE_URL !== 'undefined'
+                ? API_BASE_URL
+                : window.location.origin;
             
             try {
                 const res = await fetch(`${baseUrl}/client/start-session`, {
@@ -389,10 +391,10 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        async function fetchMessages() {
+    async function fetchMessages() {
             if(!windowSessId || isPolling) return;
             isPolling = true;
-            const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+            const baseUrl = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? API_BASE_URL : window.location.origin;
             try {
                 const res = await fetch(`${baseUrl}/sessions/${windowSessId}/messages?limit=100`);
                 const data = await res.json();
@@ -402,7 +404,7 @@
         }
 
         async function postMessage(payload) {
-            const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+            const baseUrl = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? API_BASE_URL : window.location.origin;
             try {
                 await fetch(`${baseUrl}/messages`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -548,8 +550,8 @@
             await closeSession(_selectedSat);
         });
 
-async function closeSession(satScore, endReason = 'NORMAL') {
-            const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+        async function closeSession(satScore, endReason = 'NORMAL') {
+            const baseUrl = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? API_BASE_URL : window.location.origin;
             const satNote = (document.getElementById('thankYouOneLine')?.value || '').trim();
             
             try {
@@ -595,7 +597,7 @@ async function closeSession(satScore, endReason = 'NORMAL') {
                     clearInterval(_heartbeatTimer);
                     return;
                 }
-                const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+                const baseUrl = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? API_BASE_URL : window.location.origin;
                 fetch(`${baseUrl}/sessions/${windowSessId}/heartbeat`, { method: 'POST' }).catch(() => {});
             }, 5000);
         }
@@ -603,7 +605,7 @@ async function closeSession(satScore, endReason = 'NORMAL') {
         // beforeunload는 보험으로 유지 (http 환경에선 작동)
         window.addEventListener('beforeunload', () => {
             if (_sessionClosed || !windowSessId) return;
-            const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+            const baseUrl = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? API_BASE_URL : window.location.origin;
             navigator.sendBeacon(
                 `${baseUrl}/sessions/${windowSessId}/close`,
                 new Blob([JSON.stringify({ end_reason: 'DROPOUT', sat: null, sat_note: null })],
@@ -612,14 +614,13 @@ async function closeSession(satScore, endReason = 'NORMAL') {
         });
 
 
-
         // ── 고민 유형 선택 모달 로직 ──
         let _topicList = [];          // DB에서 불러온 전체 topic 목록
         let _selectedTopics = [];     // 선택된 topic id 배열
         let _etcTopicId = null;       // '기타' topic의 id (있으면)
 
         async function loadAndShowTopicModal() {
-            const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+            const baseUrl = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? API_BASE_URL : window.location.origin;
             try {
                 const res = await fetch(`${baseUrl}/topics`);
                 const data = await res.json();
@@ -706,7 +707,7 @@ async function closeSession(satScore, endReason = 'NORMAL') {
         // 완료 버튼
         document.getElementById('topicModalComplete').addEventListener('click', async () => {
             if (_selectedTopics.length === 0) return;
-            const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://127.0.0.1:8000';
+            const baseUrl = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? API_BASE_URL : window.location.origin;
             try {
                 await fetch(`${baseUrl}/sessions/${windowSessId}/topics`, {
                     method: 'POST',

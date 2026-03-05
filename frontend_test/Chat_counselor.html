@@ -333,7 +333,7 @@
 
     <script>
         // ★ 파일 전용 독립 API 경로 설정 유지
-        const ANALYZE_URL = 'http://127.0.0.1:8001/analyze';
+        const ANALYZE_URL = `http://${window.location.hostname}:8001/analyze`;
 
         const clientId = localStorage.getItem('client_id') || 1;
         const counselorId = localStorage.getItem('counselor_id') || 1;
@@ -817,7 +817,7 @@
                 btnVideo.classList.add('on');
 
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                ws = new WebSocket(`${protocol}//127.0.0.1:8001/ws/analyze/${window._mwSessId}`);
+                ws = new WebSocket(`${protocol}//${window.location.hostname}:8001/ws/analyze/${window._mwSessId}`);
 
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
@@ -856,7 +856,7 @@
             localVideo.onloadeddata = function () {
                 localVideo.play().catch(() => {});
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                ws = new WebSocket(`${protocol}//127.0.0.1:8001/ws/analyze/${window._mwSessId}`);
+                ws = new WebSocket(`${protocol}//${window.location.hostname}:8001/ws/analyze/${window._mwSessId}`);
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
                     if (data.status === 'success') {
@@ -923,7 +923,7 @@
             });
         }
 
-        //  내담자 종료 모달 확인 → 대시보드 이동
+        // ✅ 내담자 종료 모달 확인 → 대시보드 이동
         document.getElementById('clientEndedConfirm').addEventListener('click', () => {
             document.getElementById('clientEndedModal').classList.remove('show');
             location.href = 'Main.html';
@@ -931,7 +931,7 @@
 
         // 상단 종료 버튼 클릭
         document.querySelector('.btn-end-session').addEventListener('click', () => {
-            //  이미 내담자 종료면 바로 이동 (원하는 UX)
+            // ✅ 이미 내담자 종료면 바로 이동 (원하는 UX)
             if (clientEndedShown) {
                 location.href = 'Main.html';
                 return;
