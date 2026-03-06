@@ -1546,13 +1546,13 @@
         <header class="header">
             <h2 style="font-size: 1.5rem;">메인 대시보드</h2>
             <div class="search-bar">
-                <input type="text" id="searchAlert" placeholder="세션, 내담자, 신호 유형 검색">
+                <input type="text" id="searchAlert" placeholder="S-163 (세션) 또는 C-6 (내담자) 검색">
                 <i class="fa-solid fa-magnifying-glass search-icon" id="searchAlertIcon" title="검색"></i>
             </div>
         </header>
 
-        <!-- ① KPI 카드 4개 (기획 의도 기반으로 재설계) -->
-        <div class="top-stats" id="report-kpi">
+        <!-- ① KPI 카드 3개 -->
+        <div class="top-stats" id="report-kpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
             <div class="stat-card stat-churn">
                 <div class="stat-label stat-label-with-alert">
                     <i class="fa-solid fa-comment-medical kpi-alert-icon" aria-hidden="true"></i>
@@ -1564,12 +1564,7 @@
             <div class="stat-card stat-quality">
                 <div class="stat-label">평균 상담 품질</div>
                 <div class="stat-value" id="kpi-quality">0</div>
-                <div class="stat-label stat-label-sub">quality.score 평균</div>
-            </div>
-            <div class="stat-card stat-satisfy">
-                <div class="stat-label">미해결 주요 신호</div>
-                <div class="stat-value" id="kpi-alerts">0</div>
-                <div class="stat-label stat-label-sub">DETECTED</div>
+                <div class="stat-label stat-label-sub">최근 15개 세션 평균</div>
             </div>
             <div class="stat-card stat-unassigned">
                 <div class="stat-label">주의·집중 관리 내담자</div>
@@ -1586,12 +1581,13 @@
             </div>
             <div class="card report-table-card" style="padding:0; overflow:hidden;">
                 <!-- 헤더 행 -->
-                <div style="display:grid;grid-template-columns:200px 90px 110px 110px 160px 90px auto;gap:8px;padding:10px 16px;background:#f5f6fa;border-bottom:1px solid #eee;">
+                <div style="display:grid;grid-template-columns:60px 70px 160px 1fr 1fr 180px 80px 80px;gap:0;padding:10px 20px;background:#f5f6fa;border-bottom:1px solid #eee;width:100%;box-sizing:border-box;">
+                    <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;">내담자 ID</div>
+                    <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;">세션 ID</div>
                     <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;">내담자</div>
                     <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;">흐름 평균</div>
                     <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;">품질 평균</div>
                     <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;">최고 신호</div>
-                    <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;">신호 유형</div>
                     <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;text-align:center;">만족도</div>
                     <div style="font-size:0.75rem;color:#8b92a0;font-weight:600;text-align:center;">이동</div>
                 </div>
@@ -1666,53 +1662,6 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ⑤ 주요 신호 내역 (개선) -->
-        <section class="report-section" style="margin-top:24px;">
-            <div class="card report-table-card">
-                <div class="appt-header" style="margin-bottom:12px;">
-                    <h4 style="margin:0; font-size:0.95rem; color:#373f50; font-weight:600;">주요 신호 내역</h4>
-                    <div class="appt-header-filters">
-                        <select class="appt-filter-select" id="alertTypeFilter" title="신호 유형 필터">
-                            <option value="">전체 유형</option>
-                            <option value="CONTINUITY_SIGNAL">CONTINUITY_SIGNAL</option>
-                            <option value="DELAY">DELAY</option>
-                            <option value="SHORT">SHORT</option>
-                            <option value="NEG_SPIKE">NEG_SPIKE</option>
-                            <option value="RISK_WORD">RISK_WORD</option>
-                        </select>
-                        <select class="appt-filter-select" id="alertStatusFilter" title="상태 필터">
-                            <option value="">전체 상태</option>
-                            <option value="DETECTED">DETECTED</option>
-                            <option value="RESOLVED">RESOLVED</option>
-                        </select>
-                        <select class="appt-filter-select" id="alertSortBy" title="정렬 기준">
-                            <option value="score">강도순</option>
-                            <option value="date">날짜순</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="alert-list-filter-info" id="alertListFilterInfo">
-                    <span><span class="filter-type" id="alertFilterTypeLabel"></span> <span class="filter-status" id="alertFilterStatusLabel"></span></span>
-                    <button type="button" class="btn-clear-filter" id="alertClearFilterBtn">전체 보기</button>
-                </div>
-                <div class="report-table-wrap">
-                    <table class="report-data-table">
-                        <thead>
-                            <tr>
-                                <th>내담자</th>
-                                <th>신호 유형 (건수)</th>
-                                <th>최고 강도</th>
-                                <th>처리 상태</th>
-                                <th>최근 탐지</th>
-                                <th>리포트</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-alerts"></tbody>
-                    </table>
                 </div>
             </div>
         </section>
@@ -1799,10 +1748,10 @@
                     fetch(`${API_BASE_URL}/stats/topic-dist?counselor_id=${cid}&source=client`).catch(() => null)
                 ]);
 
-                STATE.sessions  = (await sessRes.json()).items || [];
-                STATE.alerts    = (await alertRes.json()).items || [];
-                STATE.appts     = (await apptRes.json()).items || [];
-                STATE.counselors= (await counselorRes.json()).items || [];
+                STATE.sessions   = (await sessRes.json()).items || [];
+                STATE.alerts     = (await alertRes.json()).items || [];
+                STATE.appts      = (await apptRes.json()).items || [];
+                STATE.counselors = (await counselorRes.json()).items || [];
                 STATE.clientGrade = gradeRes ? ((await gradeRes.json()).items || []) : [];
                 if (topicRes) {
                     const topicJson = await topicRes.json();
@@ -1826,17 +1775,80 @@
                     risk_score:    d.risk_score || 0,
                     start_at:      d.session?.start_at || '',
                     end_reason:    d.session?.end_reason || null,
-                    sat:           d.session?.sat,           // 만족도 (1/0/null)
-                    topics:        d.topic_analysis || [],   // [{topic_name, summary}]
-                    alert_types:   d.alert_types || [],      // [{type, cnt}]
+                    sat:           d.session?.sat,
+                    topics:        d.topic_analysis || [],
+                    alert_types:   d.alert_types || [],
                     total_alerts:  d.alert_summary?.total_alerts || 0
                 }));
 
                 renderReportSections();
                 renderApptPanel();
+                initGlobalSearch(); // ← 검색 초기화
             } catch (e) {
                 console.error("대시보드 데이터 로드 오류:", e);
             }
+        }
+
+        // 검색 기능 업그레이드
+        function initGlobalSearch() {
+            const input = document.getElementById('searchAlert');
+            const icon  = document.getElementById('searchAlertIcon');
+            if (!input || !icon) return;
+
+            async function doSearch() {
+                const q = (input.value || '').trim();
+                if (!q) return;
+
+                // S-163 또는 sess_id:163 → 세션 ID로 직접 이동
+                const sessMatch = q.match(/^(?:S-|sess_id:)(\d+)$/i);
+                if (sessMatch) {
+                    window.location.href = `SessionDetail.html?sess_id=${sessMatch[1]}`;
+                    return;
+                }
+
+                // C-6 또는 c:6 → 내담자 ID로 최근 세션 찾아서 이동
+                const clientMatch = q.match(/^(?:C-|c:)(\d+)$/i);
+                if (clientMatch) {
+                    const cid = Number(clientMatch[1]);
+                    const found = STATE.sessions.find(s => s.client_id === cid);
+                    if (found) {
+                        window.location.href = `SessionDetail.html?sess_id=${found.id}`;
+                    } else {
+                        const list = document.getElementById('priority-client-list');
+                        if (list) list.innerHTML = `
+                            <div style="text-align:center;padding:24px;color:#aab0be;">
+                                내담자 ID <b style="color:#373f50;">C-${cid}</b> 의 세션을 찾을 수 없습니다.
+                                <button onclick="fetchDashboardData()"
+                                    style="margin-left:12px;padding:4px 12px;border:1px solid #ddd;
+                                        border-radius:6px;background:#fff;cursor:pointer;font-size:0.82rem;">
+                                    초기화
+                                </button>
+                            </div>`;
+                    }
+                    return;
+                }
+
+                // 숫자만 단독 입력 → 형식 안내
+                if (/^\d+$/.test(q)) {
+                    const list = document.getElementById('priority-client-list');
+                    if (list) list.innerHTML = `
+                        <div style="text-align:center;padding:24px;color:#aab0be;line-height:2;">
+                            숫자만 입력하면 구분이 어렵습니다.<br>
+                            <b style="color:#7389f4;">S-163</b> → 세션 ID 검색<br>
+                            <b style="color:#7389f4;">C-6</b> → 내담자 ID 검색<br>
+                            <button onclick="fetchDashboardData()"
+                                style="margin-top:8px;padding:4px 14px;border:1px solid #ddd;
+                                    border-radius:6px;background:#fff;cursor:pointer;font-size:0.82rem;">
+                                초기화
+                            </button>
+                        </div>`;
+                    return;
+                }
+            }
+
+            input.onkeydown = e => { if (e.key === 'Enter') doSearch(); };
+            icon.onclick = doSearch;
+            input.oninput = () => { if (!input.value.trim()) fetchDashboardData(); };
         }
 
         // 2. 이탈 신호 필터링 로직
@@ -2116,29 +2128,39 @@
         }
 
         function renderTopicChart(tab) {
-            const src    = (tab === 'ai') ? STATE.topicDistAi : STATE.topicDist;
-            const noData = !src || src.length === 0;
-            const labels = noData ? ['데이터 없음'] : src.map(t => t.topic_name || '-');
-            const counts = noData ? [0]             : src.map(t => Number(t.total || 0));
-            const colors = ['#7389f4','#58a6ff','#3fb950','#f0a500','#e05252','#a78bfa','#f97316','#14b8a6','#ec4899','#64748b'];
-            const barCfg = {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{ label: '상담 건수', data: counts,
-                        backgroundColor: noData ? ['#e8ecf4'] : labels.map((_, i) => colors[i % colors.length]),
-                        borderRadius: 6, borderSkipped: false }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y}건` } } },
-                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-                }
-            };
-            if (typeof Chart !== 'undefined') {
-                const c3 = document.getElementById('chart-topic-dist');
-                if (c3) { if (window._chartTopic) window._chartTopic.destroy(); window._chartTopic = new Chart(c3.getContext('2d'), barCfg); }
+            const src = (tab === 'ai') ? STATE.topicDistAi : STATE.topicDist;
+            const container = document.getElementById('chart-topic-dist');
+            if (!container) return;
+
+            if (window._chartTopic) { window._chartTopic.destroy(); window._chartTopic = null; }
+
+            const filtered = (src || [])
+                .filter(t => t.topic_name !== '기타/미분류')
+                .sort((a, b) => Number(b.total||0) - Number(a.total||0));
+
+            const rankColors = ['#f0a500', '#aab0be', '#cd7f32']; // 금·은·동
+            const parent = container.parentElement;
+            const div = document.createElement('div');
+            div.id = 'chart-topic-dist';
+            parent.replaceChild(div, container);
+
+            if (!filtered.length) {
+                div.innerHTML = '<div style="color:#aab0be;font-size:0.85rem;padding:20px;">데이터 없음</div>';
+                return;
             }
+
+            div.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">
+                    ${filtered.map((d, i) => {
+                        const rankColor = rankColors[i] || '#7389f4';
+                        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;background:#fafbfc;border:1px solid #f0f1f5;">
+                            <span style="font-size:0.75rem;font-weight:700;color:${rankColor};min-width:24px;">${i+1}위</span>
+                            <span style="font-size:0.85rem;font-weight:600;color:#373f50;flex:1;">${d.topic_name}</span>
+                            <span style="font-size:0.85rem;font-weight:700;color:${rankColor};">${d.total}건</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            `;
         }
 
         function renderReportSections() {
@@ -2148,9 +2170,6 @@
             // ① KPI 카드 업데이트 (기획 의도 기반)
             const activeSessions = STATE.sessions.filter(s => s.progress === 'ACTIVE');
             el('kpi-sessions').textContent = activeSessions.length;
-
-            const detectedAlerts = STATE.alerts.filter(a => a.status === 'DETECTED');
-            el('kpi-alerts').textContent = detectedAlerts.length;
 
             const avgScore = STATE.quality.length
                 ? (STATE.quality.reduce((s, q) => s + q.score, 0) / STATE.quality.length).toFixed(1)
@@ -2171,17 +2190,64 @@
             filterAlertList();
 
             // ③ 차트 1: 일별 품질 추이 (꺾은선)
-            const sortedQ = STATE.quality.slice().sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+            const sortedQ = STATE.quality.slice()
+                .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
+                .slice(-10); // 최근 10개만
+
             const qualityChartCfg = {
                 type: 'line',
                 data: {
-                    labels: sortedQ.map(q => q.sess_id ? '세션' + q.sess_id : '-'),
+                    labels: sortedQ.map(q => q.sess_id ? `#${q.sess_id}` : '-'),
                     datasets: [
-                        { label: '상담 진행 품질(flow)', data: sortedQ.map(q => q.flow),  borderColor: '#7389f4', backgroundColor: 'rgba(115,137,244,0.08)', fill: true, tension: 0.35, pointRadius: 3 },
-                        { label: '품질 점수(score)', data: sortedQ.map(q => q.score), borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.08)',    fill: true, tension: 0.35, pointRadius: 3 }
+                        {
+                            label: '흐름(flow)',
+                            data: sortedQ.map(q => q.flow),
+                            borderColor: '#7389f4',
+                            backgroundColor: 'rgba(115,137,244,0.10)',
+                            fill: true, tension: 0.35, pointRadius: 4,
+                            pointBackgroundColor: '#7389f4'
+                        },
+                        {
+                            label: '품질(score)',
+                            data: sortedQ.map(q => q.score),
+                            borderColor: '#3fb950',
+                            backgroundColor: 'rgba(63,185,80,0.08)',
+                            fill: true, tension: 0.35, pointRadius: 4,
+                            pointBackgroundColor: '#3fb950'
+                        }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 0,
+                                font: { size: 11 },
+                                color: '#aab0be'
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            min: 0, max: 100,
+                            ticks: { stepSize: 25, color: '#aab0be' },
+                            grid: { color: '#f0f1f5' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { font: { size: 11 }, usePointStyle: true }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => `세션 ${items[0].label}`,
+                                label: (item) => ` ${item.dataset.label}: ${item.raw}점`
+                            }
+                        }
+                    }
+                }
             };
             if (typeof Chart !== 'undefined') {
                 const c1 = document.getElementById('chart-quality-flow-dropout');
@@ -2314,9 +2380,24 @@
             };
             const alertTypePills = (typesObj) => {
                 if (!Object.keys(typesObj).length) return '<span style="color:#ccc;font-size:0.78rem;">없음</span>';
-                const colors = { CONTINUITY_SIGNAL:'#a78bfa', DELAY:'#f0a500', SHORT:'#58a6ff', NEG_SPIKE:'#e05252', RISK_WORD:'#c62828' };
+                const colors = { 
+                    CONTINUITY_SIGNAL:'#a78bfa', 
+                    DELAY:'#f0a500', 
+                    SHORT:'#58a6ff', 
+                    NEG_SPIKE:'#e05252', 
+                    RISK_WORD:'#c62828' 
+                };
+                const labelMap = {
+                    CONTINUITY_SIGNAL: '대화 단절',
+                    DELAY:             '응답 지연',
+                    SHORT:             '짧은 응답',
+                    NEG_SPIKE:         '부정 감정',
+                    RISK_WORD:         '위험 키워드'
+                };
                 return Object.entries(typesObj).map(([t, cnt]) =>
-                    `<span style="display:inline-block;padding:2px 7px;margin:1px;border-radius:4px;font-size:0.7rem;font-weight:600;background:${colors[t]||'#ddd'}20;color:${colors[t]||'#888'};border:1px solid ${colors[t]||'#ddd'}40;">${t}<sup style="font-size:0.6rem;margin-left:2px;">${cnt}</sup></span>`
+                    `<span style="display:inline-block;padding:2px 8px;margin:1px;border-radius:4px;font-size:0.72rem;font-weight:600;background:${colors[t]||'#ddd'}20;color:${colors[t]||'#888'};border:1px solid ${colors[t]||'#ddd'}40;">
+                        ${labelMap[t]||t}<sup style="font-size:0.6rem;margin-left:2px;">${cnt}건</sup>
+                    </span>`
                 ).join('');
             };
 
@@ -2336,54 +2417,40 @@
                     : '';
                 const dropoutTag = c.has_dropout ? '<span style="display:inline-block;padding:1px 6px;background:#fce4ec;color:#c62828;border-radius:4px;font-size:0.68rem;font-weight:700;margin-left:4px;">조기 종료 이력</span>' : '';
 
-                return `<div style="display:grid;grid-template-columns:200px 90px 110px 110px 160px 90px auto;align-items:start;gap:8px;padding:14px 16px;border-bottom:1px solid #f2f3f7;">
-                    <!-- 내담자 정보 -->
-                    <div>
-                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                            <span style="font-weight:700;color:#373f50;font-size:0.9rem;">${escHtml(c.client_name||'-')}</span>
-                            ${gradeBadge(c.client_status)}
-                            ${dropoutTag}
-                        </div>
-                        <div style="font-size:0.78rem;color:#aab0be;margin-top:2px;">세션 ${sessCount}회 · 최근 #${recentSessId}</div>
-                        ${summaryText}
-                        ${topicTags}
+            return `<div style="display:grid;grid-template-columns:60px 70px 160px 1fr 1fr 180px 80px 80px;gap:0;padding:14px 20px;border-bottom:1px solid #f2f3f7;align-items:center;width:100%;box-sizing:border-box;">
+                <!-- 내담자 ID -->
+                <div style="font-size:0.82rem;font-weight:600;color:#555;overflow:hidden;">${c.client_id||'-'}</div>
+                <!-- 세션 ID -->
+                <div style="font-size:0.82rem;font-weight:600;color:#7389f4;overflow:hidden;">#${recentSessId||'-'}</div>
+                <!-- 내담자 이름·등급 -->
+                <div style="overflow:hidden;">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                        <span style="font-weight:700;color:#373f50;font-size:0.9rem;">${escHtml(c.client_name||'-')}</span>
+                        ${gradeBadge(c.client_status)}
                     </div>
-                    <!-- 최근 흐름 점수 -->
-                    <div>
-                        <div style="font-size:0.7rem;color:#aab0be;margin-bottom:3px;">흐름</div>
-                        ${miniBar(avgFlow(c))}
-                    </div>
-                    <!-- 최근 품질 점수 -->
-                    <div>
-                        <div style="font-size:0.7rem;color:#aab0be;margin-bottom:3px;">품질</div>
-                        ${miniBar(avgScore(c))}
-                    </div>
-                    <!-- 최고 신호 강도 -->
-                    <div>
-                        <div style="font-size:0.7rem;color:#aab0be;margin-bottom:3px;">최고 신호</div>
-                        <span style="font-weight:700;font-size:0.88rem;color:${c.max_alert_score>=0.65?'#e05252':c.max_alert_score>=0.4?'#f0a500':'#3fb950'};">
-                            ${c.max_alert_score>0?c.max_alert_score.toFixed(2):'—'}
-                        </span>
-                        <span style="font-size:0.7rem;color:#aab0be;margin-left:2px;">(${c.total_alerts}건)</span>
-                    </div>
-                    <!-- 신호 유형 breakdown -->
-                    <div>
-                        <div style="font-size:0.7rem;color:#aab0be;margin-bottom:3px;">신호 유형</div>
-                        <div>${alertTypePills(c.alert_types_all)}</div>
-                    </div>
-                    <!-- 만족도 -->
-                    <div style="text-align:center;">
-                        <div style="font-size:0.7rem;color:#aab0be;margin-bottom:3px;">최근 만족도</div>
-                        ${satIcon(c.sat_list)}
-                    </div>
-                    <!-- 리포트 -->
-                    <div style="text-align:center;">
-                        <a href="SessionDetail.html?sess_id=${recentSessId}" target="_blank"
-                           style="display:inline-block;padding:5px 12px;background:#7389f4;color:#fff;border-radius:6px;font-size:0.78rem;font-weight:600;text-decoration:none;white-space:nowrap;">
-                            리포트
-                        </a>
-                    </div>
-                </div>`;
+                </div>
+                <!-- 흐름 평균 -->
+                <div style="padding-right:16px;overflow:hidden;">${miniBar(avgFlow(c))}</div>
+                <!-- 품질 평균 -->
+                <div style="padding-right:16px;overflow:hidden;">${miniBar(avgScore(c))}</div>
+                <!-- 최고 신호 -->
+                <div style="overflow:hidden;">
+                    <span style="font-weight:700;font-size:0.88rem;color:${c.max_alert_score>=0.65?'#e05252':c.max_alert_score>=0.4?'#f0a500':'#3fb950'};">
+                        ${c.max_alert_score>0?c.max_alert_score.toFixed(2):'—'}
+                    </span>
+                    <span style="font-size:0.7rem;color:#aab0be;margin-left:2px;">(${c.total_alerts}건)</span>
+                    <div style="margin-top:4px;">${alertTypePills(c.alert_types_all)}</div>
+                </div>
+                <!-- 만족도 -->
+                <div style="text-align:center;overflow:hidden;">${satIcon(c.sat_list)}</div>
+                <!-- 이동 -->
+                <div style="text-align:center;overflow:hidden;">
+                    <a href="SessionDetail.html?sess_id=${recentSessId}" target="_blank"
+                    style="display:inline-block;padding:5px 12px;background:#7389f4;color:#fff;border-radius:6px;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                        리포트
+                    </a>
+                </div>
+            </div>`;
             }).join('');
         }
 
@@ -2505,6 +2572,9 @@
 
         // 초기화 및 이벤트 리스너
         document.addEventListener('DOMContentLoaded', () => {
+            // 데이터 로드
+            fetchDashboardData();
+
             // 예약 패널 필터 이벤트
             ['apptPanelSearch','apptPanelStatusFilter'].forEach(id => {
                 const el = document.getElementById(id);

@@ -138,7 +138,7 @@
         .save-msg.visible { display: inline-flex; }
 
         /* 감정·발화 지표 스코어 */
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .metric-card { background: #f9faff; border: 1px solid #e8ecf4; border-radius: 8px; padding: 12px 14px; }
         .metric-card .metric-label { font-size: 0.8rem; color: #666; margin-bottom: 4px; }
         .metric-card .metric-value { font-size: 1.1rem; font-weight: 700; color: #373f50; }
@@ -196,15 +196,16 @@
             본 리포트는 AI 기반 분석 데이터로, 상담 품질 향상을 위한 참고 자료로 제공됩니다. 최종 판단과 대응은 상담사의 책임 하에 수행되어야 함을 안내드립니다.
         </div>
 
-        <div class="report-header">
-            <h1 class="report-title">세션 상담 리포트</h1>
-            <p class="report-meta" id="reportMeta">세션 ID: — | 생성일: —</p>
-            <p class="report-stage" id="reportStage">상담 단계: <strong>—</strong></p>
-            <div class="report-satisfaction" id="reportSatisfaction">
-                <span class="sat-badge sat-none" id="satBadge">만족도: 무응답</span>
-            </div>
+    <div class="report-header">
+        <h1 class="report-title">세션 상담 리포트</h1>
+        <p class="report-sess-id" id="reportSessId" style="font-size:1.1rem;font-weight:700;color:#373f50;margin:8px 0 4px;">S-—</p>
+        <p class="report-client-info" id="reportClientInfo" style="font-size:0.95rem;color:#555;margin-bottom:10px;">— | ID: —</p>
+        <p class="report-meta" id="reportMeta">생성일: —</p>
+        <p class="report-stage" id="reportStage">상담 단계: <strong>—</strong></p>
+        <div class="report-satisfaction" id="reportSatisfaction">
+            <span class="sat-badge sat-none" id="satBadge">만족도: 무응답</span>
         </div>
-
+    </div>
         <section class="report-section">
             <h3>감정 및 발화 지표 스코어</h3>
             <div class="metrics-grid" id="metricsGrid">
@@ -301,7 +302,11 @@
                 const alertData = alertRes ? await alertRes.json() : { items: [] };
 
                 // 헤더 업데이트
-                document.getElementById('reportMeta').textContent = `세션 ID: S-${sessId} | 생성일: ${new Date(dash.session?.start_at || Date.now()).toLocaleString('ko-KR')}`;
+                const clientName = dash.session?.client_name || '';
+                const clientId   = dash.session?.client_id   || '—';
+                document.getElementById('reportSessId').textContent     = `S-${sessId}`;
+                document.getElementById('reportClientInfo').textContent = `${clientName}  |  ID: ${clientId}`;
+                document.getElementById('reportMeta').textContent       = `생성일: ${new Date(dash.session?.start_at || Date.now()).toLocaleString('ko-KR')}`;
                 const stageLabel = dash.session?.stage ||
                     (dash.session?.progress === 'ACTIVE' ? '진행 중' :
                      dash.session?.end_reason === 'DROPOUT' ? '이탈 종료' :
@@ -326,9 +331,9 @@
                 // 스코어 카드 업데이트
                 const quality = dash.quality || {};
                 document.getElementById('metricsGrid').innerHTML = `
-                    <div class="metric-card"><div class="metric-label">종합 품질 점수</div><div class="metric-value">${quality.score?.toFixed(1) || '—'}</div></div>
-                    <div class="metric-card"><div class="metric-label">상담 흐름 점수</div><div class="metric-value">${quality.flow?.toFixed(1) || '—'}</div></div>
-                    <div class="metric-card"><div class="metric-label">이탈 위험도</div><div class="metric-value">${quality.churn_prob != null ? (quality.churn_prob).toFixed(2) : '—'}</div></div>
+                    <div class="metric-card"><div class="metric-label">상담 품질</div><div class="metric-value">${quality.score?.toFixed(1) || '—'}</div></div>
+                    <div class="metric-card"><div class="metric-label">대화 흐름</div><div class="metric-value">${quality.flow?.toFixed(1) || '—'}</div></div>
+                    <div class="metric-card"><div class="metric-label">이탈 가능성</div><div class="metric-value">${quality.churn_prob != null ? (quality.churn_prob).toFixed(2) : '—'}</div></div>
                 `;
 
                 // 토픽 및 키워드 업데이트
