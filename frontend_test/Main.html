@@ -1536,7 +1536,7 @@
             <i class="fa-solid fa-gear"></i>
             <span class="btn-text">&nbsp; Settings</span>
         </a>
-        <a href="#" class="logout-btn">
+        <a href="#" class="logout-btn" id="logoutBtn">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
             <span class="btn-text">&nbsp; Logout Account</span>
         </a>
@@ -2667,6 +2667,20 @@
             
             if (counselorNameEl) counselorNameEl.textContent = (localStorage.getItem('counselor_name') || '상담사') + ' 상담사님';
             if (counselorEmailEl) counselorEmailEl.textContent = localStorage.getItem('counselor_email') || '이메일 정보 없음';
+
+            // --- 로그아웃 버튼 이벤트 추가 ---
+            const logoutBtn = document.querySelector('.logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // 세션 데이터 정리
+                    localStorage.removeItem('counselor_id');
+                    localStorage.removeItem('counselor_name');
+                    localStorage.removeItem('counselor_email');
+                    // 페이지 이동
+                    window.location.href = 'Landing.html';
+                });
+            }
 
             // 데이터 초기 로딩
             fetchDashboardData();

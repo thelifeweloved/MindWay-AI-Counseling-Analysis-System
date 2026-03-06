@@ -335,6 +335,7 @@
         const clientId = _urlParams.get('client_id') || localStorage.getItem('client_id') || 1;
         const counselorId = _urlParams.get('counselor_id') || localStorage.getItem('counselor_id') || 1;
         const counselorName = localStorage.getItem('counselor_name') || '상담사';
+        
 
         document.getElementById('displayCounselorName').innerText = counselorName;
         document.getElementById('headerCounselorName').innerText = counselorName;

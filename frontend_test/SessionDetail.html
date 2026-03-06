@@ -209,9 +209,9 @@
         <section class="report-section">
             <h3>감정 및 발화 지표 스코어</h3>
             <div class="metrics-grid" id="metricsGrid">
-                <div class="metric-card"><div class="metric-label">종합 품질 점수</div><div class="metric-value" id="metricScore">—</div></div>
-                <div class="metric-card"><div class="metric-label">상담 흐름 점수</div><div class="metric-value" id="metricFlow">—</div></div>
-                <div class="metric-card"><div class="metric-label">이탈 위험도</div><div class="metric-value" id="metricRisk">—</div></div>
+                <div class="metric-card"><div class="metric-label">상담 품질</div><div class="metric-value" id="metricScore">—</div></div>
+                <div class="metric-card"><div class="metric-label">대화 흐름</div><div class="metric-value" id="metricFlow">—</div></div>
+                <div class="metric-card"><div class="metric-label">이탈 가능성</div><div class="metric-value" id="metricRisk">—</div></div>
             </div>
         </section>
 
@@ -330,7 +330,7 @@
 
                 // 스코어 카드 업데이트
                 const quality = dash.quality || {};
-                document.getElementById('metricsGrid').innerHTML = `
+                    document.getElementById('metricsGrid').innerHTML = `
                     <div class="metric-card"><div class="metric-label">상담 품질</div><div class="metric-value">${quality.score?.toFixed(1) || '—'}</div></div>
                     <div class="metric-card"><div class="metric-label">대화 흐름</div><div class="metric-value">${quality.flow?.toFixed(1) || '—'}</div></div>
                     <div class="metric-card"><div class="metric-label">이탈 가능성</div><div class="metric-value">${quality.churn_prob != null ? (quality.churn_prob).toFixed(2) : '—'}</div></div>
