@@ -431,38 +431,46 @@
         }
 
         async function initSession() {
+            // 1. URL 파라미터에서 appt_id를 가져옵니다.
+            const apptId = _urlParams.get('appt_id'); 
+
             try {
                 const res = await fetch(`${API_BASE_URL}/client/start-session`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id: Number(clientId), counselor_id: Number(counselorId) })
+                    // 2. body에 appt_id를 추가하여 서버에 전달합니다.
+                    body: JSON.stringify({ 
+                        client_id: Number(clientId), 
+                        counselor_id: Number(counselorId),
+                        appt_id: apptId ? Number(apptId) : null 
+                    })
                 });
+                
                 const data = await res.json();
                 if (data && data.sess_id) {
                     window._mwSessId = data.sess_id;
 
-                    // ✅ 항상 채팅창 초기화 (이전 세션 찌꺼기 제거)
+                    // 항상 채팅창 초기화 (이전 세션 찌꺼기 제거)
                     const container = document.getElementById('chatMessages');
                     if (container) container.innerHTML = '';
 
                     document.getElementById('headerSessionId').innerText = `SESS-${data.sess_id} · 실시간 상담 중`;
                     startSessionTimer();
 
-                    // ✅ 폴링 시작 (메시지/상태 각각)
+                    // 폴링 시작 (메시지/상태 각각)
                     if (chatPollId) clearInterval(chatPollId);
                     chatPollId = setInterval(fetchMessages, 2000);
 
                     if (statusPollId) clearInterval(statusPollId);
                     statusPollId = setInterval(pollSessionStatus, 1000);
 
-                    // ✅ 내담자 감정 폴링 시작
-                    //startEmotionPolling();
-
-                    // ✅ 내담자 영상 수신 시작
+                    // 내담자 영상 수신 시작
                     startVideoReceiver();
                 }
-            } catch (e) { console.error("세션 연결 실패:", e); }
-        }
+            } catch (e) { 
+                console.error("세션 연결 실패:", e); 
+            }
+        } 
 
         function formatElapsed(sec) {
             var h = Math.floor(sec / 3600); var m = Math.floor((sec % 3600) / 60); var s = Math.floor(sec % 60);

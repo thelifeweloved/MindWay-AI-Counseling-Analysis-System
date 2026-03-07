@@ -254,54 +254,51 @@ def get_client_my_appointment(client_id: int, db: Session = Depends(get_db)):
 
 @app.post("/client/start-session")
 def client_start_session(payload: ClientStartSessionRequest, db: Session = Depends(get_db)):
-    
-    # 1. appt_id가 있으면 해당 예약의 세션 재사용 또는 생성
-    if payload.appt_id:
-        # appt에 이미 연결된 세션 확인
-        existing = db.execute(text("""
-            SELECT s.id FROM sess s
-            JOIN appt a ON a.id = :appt_id
-            WHERE s.client_id = a.client_id 
-              AND s.counselor_id = a.counselor_id
-              AND s.progress IN ('WAITING','ACTIVE')
-              AND s.end_at IS NULL
-            ORDER BY s.id DESC LIMIT 1
-        """), {"appt_id": payload.appt_id}).scalar()
-        
-        if existing:
-            return {"status": "success", "sess_id": int(existing), "reused": True}
+    """
+    내담자와 상담사가 동일한 세션 ID를 공유하도록 매칭 로직을 강화합니다.
+    """
+    coid = payload.counselor_id
+    clid = payload.client_id
+    appt_id = payload.appt_id
 
-        # appt에서 counselor_id 가져오기
-        appt = db.execute(text("""
-            SELECT counselor_id, client_id FROM appt WHERE id = :appt_id
-        """), {"appt_id": payload.appt_id}).mappings().first()
-        
-        if appt:
-            coid = appt["counselor_id"]
-            clid = appt["client_id"]
-        else:
-            coid = payload.counselor_id
-            clid = payload.client_id
-    else:
-        coid = payload.counselor_id
-        clid = payload.client_id
-        # 기존 로직: ACTIVE 세션 재사용
+    # 1. 예약 ID(appt_id)가 있는 경우: 해당 예약에 연결된 기존 세션이 있는지 확인
+    if appt_id:
         existing = db.execute(text("""
-            SELECT id FROM sess
-            WHERE client_id = :clid AND counselor_id = :coid
-              AND end_at IS NULL AND progress IN ('WAITING','ACTIVE')
+            SELECT id FROM sess 
+            WHERE appt_id = :appt_id 
+              AND progress IN ('WAITING','ACTIVE')
+              AND end_at IS NULL
             ORDER BY id DESC LIMIT 1
-        """), {"clid": clid, "coid": coid}).scalar()
+        """), {"appt_id": appt_id}).scalar()
+        
         if existing:
+            # 이미 생성된 세션이 있다면 해당 ID를 그대로 반환 (상담사/내담자 동기화)
             return {"status": "success", "sess_id": int(existing), "reused": True}
 
-    # 새 세션 생성
+    # 2. 예약 ID가 없더라도 동일한 상담사-내담자 조합의 진행 중인 세션이 있는지 확인
+    existing_no_appt = db.execute(text("""
+        SELECT id FROM sess
+        WHERE client_id = :clid AND counselor_id = :coid
+          AND end_at IS NULL AND progress IN ('WAITING','ACTIVE')
+        ORDER BY id DESC LIMIT 1
+    """), {"clid": clid, "coid": coid}).scalar()
+    
+    if existing_no_appt:
+        return {"status": "success", "sess_id": int(existing_no_appt), "reused": True}
+
+    # 3. 위 조건에 해당하지 않는 경우에만 새 세션 생성
     new_uuid = str(uuid.uuid4())
     res = db.execute(text("""
-        INSERT INTO sess (uuid, counselor_id, client_id, channel, progress)
-        VALUES (:uuid, :coid, :clid, 'CHAT', 'ACTIVE')
-    """), {"uuid": new_uuid, "coid": coid, "clid": clid})
+        INSERT INTO sess (uuid, counselor_id, client_id, appt_id, channel, progress)
+        VALUES (:uuid, :coid, :clid, :appt_id, 'CHAT', 'ACTIVE')
+    """), {
+        "uuid": new_uuid, 
+        "coid": coid, 
+        "clid": clid, 
+        "appt_id": appt_id
+    })
     db.commit()
+    
     return {"status": "success", "sess_id": int(res.lastrowid), "reused": False}
 
 @app.get("/sessions")
