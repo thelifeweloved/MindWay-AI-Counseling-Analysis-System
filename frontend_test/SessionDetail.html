@@ -363,9 +363,9 @@
 
                 // ── 불일치 감지 ──
                 if (clientTopics.length > 0 && topicList.length > 0) {
-                    const clientCodes = clientTopics.map(t => t.name);
-                    const aiCodes     = topicList.map(t => t.topic_name);
-                    const overlap     = clientCodes.some(n => aiCodes.includes(n));
+                    const clientCodes = clientTopics.map(t => t.code);
+                    const aiCodes     = topicList.map(t => t.code);
+                    const overlap     = clientCodes.some(c => aiCodes.includes(c));
                     const mismatchEl  = document.getElementById('topicMismatchNote');
                     if (mismatchEl) mismatchEl.style.display = overlap ? 'none' : 'block';
                 }

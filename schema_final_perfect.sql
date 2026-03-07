@@ -1,9 +1,7 @@
-스키마 수정이요....
-
 
 -- =====================================================
 -- [최종 제출용] MindWay 데이터베이스 스키마
--- 작성일: 2026.02.26 / 작성자: 정이안
+-- 작성일: 2026.03.07 / 작성자: 정이안
 -- 서비스명: 비대면 상담 분석 보조 AI 리포트 서비스
 -- =====================================================
 
@@ -257,3 +255,11 @@ CREATE TABLE IF NOT EXISTS sess_analysis (
     -- 상담사 메모를 공백까지 막고 싶으면 아래 CHECK를 추가(선택)
     -- ,CONSTRAINT ck_sess_analysis_note_nonempty CHECK (CHAR_LENGTH(TRIM(음표)) >= 1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='세션 요약 및 상담사 의견';
+
+CREATE TABLE sess_topic (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sess_id BIGINT NOT NULL,
+    topic_id INT NOT NULL,
+    prio INT DEFAULT 1,
+    UNIQUE KEY uk_sess_topic (sess_id, topic_id)
+);

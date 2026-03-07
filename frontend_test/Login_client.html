@@ -170,6 +170,32 @@
     </div>
 
 <script>
+
+    // 페이지 로드 시 이미 로그인된 내담자면 바로 상담사 선택으로 이동
+    document.addEventListener('DOMContentLoaded', async () => {
+        const clientId = localStorage.getItem('client_id');
+        if (!clientId) return; // 로그인 안 된 상태면 폼 그대로 표시
+
+        // 이미 로그인된 상태 → 예약 확인 후 바로 진행
+        try {
+            const apptRes  = await fetch(`${API_BASE_URL}/appointments?client_id=${clientId}`);
+            const apptData = await apptRes.json();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const upcoming = (apptData.items || []).find(a =>
+                a.status === 'CONFIRMED' && new Date(a.at) >= today
+            );
+            if (upcoming) {
+                showApptReady(upcoming);
+            } else {
+                await loadCounselorList();
+                toggleView('counselor');
+            }
+        } catch(e) {
+            // 실패 시 로그인 폼 그대로 표시
+        }
+    });
+
     function togglePassword(inputId, icon) {
         const input = inputId ? document.getElementById(inputId) : icon.parentElement.querySelector('input');
         const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
