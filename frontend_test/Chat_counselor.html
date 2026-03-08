@@ -1064,9 +1064,27 @@
             });
         }
 
-        // ✅ 내담자 종료 모달 확인 → 대시보드 이동
-        document.getElementById('clientEndedConfirm').addEventListener('click', () => {
+        document.getElementById('clientEndedConfirm').addEventListener('click', async () => {
             document.getElementById('clientEndedModal').classList.remove('show');
+
+            try {
+                const sessId = window._mwSessId || windowSessId;
+
+                if (sessId) {
+                    await fetch(`${API_BASE_URL}/sessions/${sessId}/close`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            end_reason: 'DROPOUT',
+                            sat: null,
+                            sat_note: null
+                        })
+                    });
+                }
+            } catch (e) {
+                console.warn('보정 close 실패', e);
+            }
+
             location.href = 'Main.html';
         });
 

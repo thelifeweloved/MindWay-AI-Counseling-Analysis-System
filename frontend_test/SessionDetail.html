@@ -150,7 +150,8 @@
         .full-chat-wrap::-webkit-scrollbar-thumb { background: #dde2ef; border-radius: 4px; }
         .chat-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
         .chat-row.row-client { flex-direction: row; }
-        .chat-row.row-counselor { flex-direction: row-reverse; }
+        .chat-row.row-client { justify-content: flex-start; }
+        .chat-row.row-counselor { justify-content: flex-end; }
         .chat-bubble { max-width: 72%; padding: 8px 12px; border-radius: 12px; font-size: 0.88rem; line-height: 1.5; word-break: break-word; }
         .chat-row.row-client .chat-bubble { background: #fff; border: 1px solid #e8ecf4; color: #333; border-radius: 4px 12px 12px 12px; }
         .chat-row.row-counselor .chat-bubble { background: #7389f4; color: #fff; border-radius: 12px 4px 12px 12px; }
@@ -362,12 +363,24 @@
                 }
 
                 // ── 불일치 감지 ──
-                if (clientTopics.length > 0 && topicList.length > 0) {
-                    const clientCodes = clientTopics.map(t => t.code);
-                    const aiCodes     = topicList.map(t => t.code);
-                    const overlap     = clientCodes.some(c => aiCodes.includes(c));
-                    const mismatchEl  = document.getElementById('topicMismatchNote');
-                    if (mismatchEl) mismatchEl.style.display = overlap ? 'none' : 'block';
+                const mismatchEl = document.getElementById('topicMismatchNote');
+
+                if (mismatchEl) {
+                    mismatchEl.style.display = 'none';
+
+                    if (clientTopics.length > 0 && topicList.length > 0) {
+                        const clientCodes = clientTopics
+                            .map(t => (t.code || '').trim().toUpperCase())
+                            .filter(Boolean);
+
+                        const aiCodes = topicList
+                            .map(t => (t.code || '').trim().toUpperCase())
+                            .filter(Boolean);
+
+                        const overlap = clientCodes.some(code => aiCodes.includes(code));
+
+                        mismatchEl.style.display = overlap ? 'none' : 'block';
+                    }
                 }
 
                 // ── 키워드 태그 (HCX) ──

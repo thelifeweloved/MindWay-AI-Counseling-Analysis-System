@@ -124,24 +124,40 @@ def hash_pwd(pwd: str) -> str:
 def detect_dropout_signal(message: Optional[str]) -> Optional[Dict[str, Any]]:
     if not message:
         return None
-    msg = message.strip()
+
+    msg = message.strip().replace(" ", "")
     score = 0.0
     rules = []
     action = ""
 
-    if any(kw in msg for kw in ["그만", "힘들", "포기", "싫어", "의미없"]):
-        score += 0.5
-        rules.append("NEG_KEYWORD")
-        action = "내담자의 정서적 소진 신호가 감지되었습니다. 지지와 공감이 필요합니다."
+    strong_keywords = [
+        "상담그만", "그만하고싶", "그만둘래", "포기하고싶",
+        "상담필요없", "효과없는것같", "의미없", "못하겠",
+        "안할래", "끝내고싶"
+    ]
 
-    if score >= 0.5:
+    medium_keywords = [
+        "그만", "포기", "싫어", "힘들", "의미없"
+    ]
+
+    if any(kw in msg for kw in strong_keywords):
+        score += 0.8
+        rules.append("STRONG_DROPOUT_KEYWORD")
+        action = "상담 지속 의지가 낮아지는 신호가 감지되었습니다. 상담 지속 의사와 어려움을 구체적으로 확인해 주세요."
+
+    elif any(kw in msg for kw in medium_keywords):
+        score += 0.4
+        rules.append("NEG_KEYWORD")
+
+    if score >= 0.7:
         return {
             "type": "CONTINUITY_SIGNAL",
             "status": "DETECTED",
             "score": round(min(score, 1.0), 2),
             "rule": "|".join(rules)[:50],
-            "action": action
+            "action": action or "상담 지속 관련 신호가 감지되었습니다. 맥락을 확인해 주세요."
         }
+
     return None
 
 # ---------------------------------------------------------
@@ -475,8 +491,10 @@ def session_dashboard(sess_id: int, db: Session = Depends(get_db)):
     
     risk_score = float(db.execute(text("SELECT COALESCE(AVG(score), 0) FROM alert WHERE sess_id = :sid"), {"sid": sess_id}).scalar() or 0.0)
     topic_analysis = db.execute(text("""
-        SELECT sa.topic_id, t.name as topic_name, sa.summary, sa.note
-        FROM sess_analysis sa LEFT JOIN topic t ON sa.topic_id = t.id WHERE sa.sess_id = :sid
+        SELECT sa.topic_id, t.code, t.name AS topic_name, sa.summary, sa.note
+        FROM sess_analysis sa
+        LEFT JOIN topic t ON sa.topic_id = t.id
+        WHERE sa.sess_id = :sid
     """), {"sid": sess_id}).mappings().all()
 
     # 내담자가 선택한 고민 주제 (SessionDetail.html client_topics 섹션용)
