@@ -22,6 +22,8 @@ from dotenv import load_dotenv
 from starlette.websockets import WebSocketState
 
 from db import get_db
+from services.topic_service import get_topics_payload
+from services.counselor_service import get_counselors_payload
 from routers.helper import router as helper_router
 from routers.deepface import analyze_face_logic
 from routers.api import api_router
@@ -673,9 +675,7 @@ def get_appointments(counselor_id: Optional[int] = Query(None), db: Session = De
 
 @app.get("/counselors")
 def get_counselors(db: Session = Depends(get_db)):
-    sql = "SELECT id, name FROM counselor"
-    result = db.execute(text(sql)).mappings().all()
-    return {"items": jsonable_encoder(list(result))}
+    return get_counselors_payload(db)
 
 
 @app.post("/appt")
@@ -725,14 +725,7 @@ def update_appointment(appt_id: int, payload: ApptUpdateRequest, db: Session = D
 @app.get("/topics")
 def get_topics(db: Session = Depends(get_db)):
     """내담자 고민 유형 선택지 반환 — REGISTER 타입만, 고정 순서로 제공"""
-    rows = db.execute(text("""
-        SELECT id, code, name FROM topic
-        WHERE type = 'REGISTER'
-        ORDER BY FIELD(code,
-            'ANXIETY', 'DEPRESSION', 'RELATION', 'FAMILY',
-            'ROMANCE', 'CAREER', 'WORK', 'TRAUMA', 'SELF_ESTEEM', 'ETC')
-    """)).mappings().all()
-    return {"items": [dict(r) for r in rows]}
+    return get_topics_payload(db)
 
 @app.post("/sessions/{sess_id}/topics")
 def save_session_topics(sess_id: int, payload: dict, db: Session = Depends(get_db)):
